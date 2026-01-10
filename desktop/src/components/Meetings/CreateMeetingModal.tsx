@@ -53,6 +53,7 @@ export default function CreateMeetingModal({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [contactStatus, setContactStatus] = useState<Record<string, boolean>>({});
+  const [dontIncludeCreator, setDontIncludeCreator] = useState(false);
 
   // Load available users for invitation
   useEffect(() => {

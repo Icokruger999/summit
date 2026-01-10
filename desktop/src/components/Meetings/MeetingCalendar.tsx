@@ -46,10 +46,14 @@ export default function MeetingCalendar({
     };
   }, [userId]);
 
-  const loadMeetings = async () => {
+  const loadMeetings = async (showLoading = true) => {
     try {
+      if (showLoading) {
+        setLoading(true);
+      }
       const { meetingsApi } = await import("../../lib/api");
       const data = await meetingsApi.getAll();
+      console.log("✅ Loaded meetings:", data.length);
       setMeetings(data);
     } catch (error) {
       console.error("Error loading meetings:", error);
