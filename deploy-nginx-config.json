@@ -1,0 +1,27 @@
+{
+  "commands": [
+    "echo '=== Deploying Nginx Configuration for WebSocket Support ==='",
+    "sudo cp /etc/nginx/sites-available/summit-api /etc/nginx/sites-available/summit-api.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo 'Creating new config...'",
+    "cd /var/www/summit",
+    "git pull origin main",
+    "echo '---'",
+    "echo 'Copying nginx config from repository...'",
+    "sudo cp summit-api-nginx.conf /etc/nginx/sites-available/summit-api",
+    "echo '---'",
+    "echo 'Testing nginx configuration...'",
+    "sudo nginx -t",
+    "if [ $? -eq 0 ]; then",
+    "  echo '✅ Nginx config is valid'",
+    "  echo 'Reloading nginx...'",
+    "  sudo systemctl reload nginx",
+    "  echo '✅ Nginx reloaded successfully'",
+    "else",
+    "  echo '❌ Nginx config test failed - NOT reloading'",
+    "  exit 1",
+    "fi",
+    "echo '---'",
+    "echo 'Verifying nginx is running...'",
+    "sudo systemctl status nginx --no-pager -l | head -10"
+  ]
+}
+
