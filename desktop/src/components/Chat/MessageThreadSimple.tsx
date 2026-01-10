@@ -25,6 +25,7 @@ interface MessageThreadSimpleProps {
     dbId?: string; // Database UUID (for API calls)
   };
   onStartCall: (roomName: string, callType?: "audio" | "video") => void;
+  onMessageSent?: (chatId: string, message: string, timestamp: Date) => void;
 }
 
 export default function MessageThreadSimple({
@@ -32,6 +33,7 @@ export default function MessageThreadSimple({
   userId,
   chat,
   onStartCall,
+  onMessageSent,
 }: MessageThreadSimpleProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -426,10 +428,15 @@ export default function MessageThreadSimple({
                 let existingReadReceipts: Record<string, any[]> = {};
                 if (ownMessageIds.length > 0 && !isCancelled) {
                   try {
-                    existingReadReceipts = await messagesApi.getReadReceipts(ownMessageIds);
+                    const receipts = await messagesApi.getReadReceipts(ownMessageIds);
+                    // Ensure receipts is a Record<string, any[]>
+                    existingReadReceipts = receipts && typeof receipts === "object" && !Array.isArray(receipts) 
+                      ? receipts as Record<string, any[]> 
+                      : {};
                     console.log(`✅ Fetched existing read receipts for ${Object.keys(existingReadReceipts).length} messages`);
                   } catch (error) {
                     console.error("Error fetching existing read receipts:", error);
+                    existingReadReceipts = {};
                   }
                 }
                 
@@ -632,6 +639,11 @@ export default function MessageThreadSimple({
         messageCache.updateMessageStatus(chatId, messageId, "sent", dbChatId || undefined);
         return updated;
       });
+      
+      // Call onMessageSent callback if provided
+      if (onMessageSent) {
+        onMessageSent(chatId, messageContent, new Date());
+      }
       
       // Update chat list to show "You: xxx" immediately
       window.dispatchEvent(new CustomEvent('messageUpdate', {
