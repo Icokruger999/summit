@@ -1,13 +1,25 @@
 version: 1
 frontend:
   phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies for Summit React app..."
+        - cd desktop
+        - npm ci
     build:
       commands:
-        - echo "Deploying static HTML files"
+        - echo "Building Summit React application..."
+        - cd desktop
+        - echo "VITE_SERVER_URL=https://summit-api.codingeverest.com/api" > .env.production
+        - npm run build
+        - echo "Build completed!"
+        - echo "Contents of dist folder:"
+        - ls -la dist/
   artifacts:
-    baseDirectory: /
+    baseDirectory: desktop/dist
     files:
       - '**/*'
   cache:
-    paths: []
-
+    paths:
+      - desktop/node_modules/**/*
+      - desktop/.npm/**/*
