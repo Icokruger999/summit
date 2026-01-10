@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "echo 'Checking current nginx config...'",
+    "ls -la /etc/nginx/sites-available/ | grep -i summit || ls -la /etc/nginx/sites-available/ | grep -i api",
+    "echo '---'",
+    "echo 'Backing up current nginx config...'",
+    "sudo cp /etc/nginx/sites-available/summit-api /etc/nginx/sites-available/summit-api.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo 'Config file not found, will create new one'",
+    "echo '---'",
+    "echo 'Note: WebSocket configuration needs to be added to nginx config'",
+    "echo 'The /ws location must have Upgrade and Connection headers'",
+    "echo 'See nginx-websocket-fix.conf for the correct configuration'"
+  ]
+}
+
