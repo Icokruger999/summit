@@ -3,10 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Summit Login - No build needed (static HTML)"
+        - echo "Summit Login - Preparing static files"
+        - ls -la
     build:
       commands:
-        - echo "Deploying static files"
+        - echo "Deploying static HTML files"
+        - echo "Files present:"
+        - ls -la
+        - test -f index.html && echo "✅ index.html found" || echo "❌ index.html missing"
   artifacts:
     baseDirectory: /
     files:
