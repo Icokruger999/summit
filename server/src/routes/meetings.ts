@@ -11,21 +11,31 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
 
     // Optimized: Get meetings and participants in a single query using JSON aggregation
-    // Note: recurrence (JSONB) cannot be in GROUP BY, so we use MIN() which works with JSONB
-    // All rows have the same recurrence value per meeting, so MIN/MAX both work
+    // Note: recurrence (JSONB) cannot be used in GROUP BY or aggregate functions directly
+    // Solution: Use DISTINCT ON with a subquery to get unique meetings, then join participants
     const result = await query(`
-      SELECT
-        m.id,
-        m.title,
-        m.description,
-        m.start_time,
-        m.end_time,
-        m.room_id,
-        m.created_by,
-        MIN(m.recurrence) as recurrence,
-        m.created_at,
-        m.updated_at,
-        COALESCE(
+      WITH meeting_base AS (
+        SELECT DISTINCT ON (m.id)
+          m.id,
+          m.title,
+          m.description,
+          m.start_time,
+          m.end_time,
+          m.room_id,
+          m.created_by,
+          m.recurrence,
+          m.created_at,
+          m.updated_at
+        FROM meetings m
+        WHERE m.created_by = $1 OR EXISTS (
+          SELECT 1 FROM meeting_participants mp2 
+          WHERE mp2.meeting_id = m.id AND mp2.user_id = $1
+        )
+        ORDER BY m.id, m.start_time
+      ),
+      participants_agg AS (
+        SELECT
+          mp.meeting_id,
           json_agg(
             jsonb_build_object(
               'id', u.id,
@@ -34,19 +44,18 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
               'avatar_url', u.avatar_url,
               'status', mp.status
             ) ORDER BY u.name
-          ) FILTER (WHERE u.id IS NOT NULL),
-          '[]'::json
-        ) as participants
-      FROM meetings m
-      LEFT JOIN meeting_participants mp ON m.id = mp.meeting_id
-      LEFT JOIN users u ON mp.user_id = u.id
-      WHERE m.created_by = $1 OR EXISTS (
-        SELECT 1 FROM meeting_participants mp2 
-        WHERE mp2.meeting_id = m.id AND mp2.user_id = $1
+          ) FILTER (WHERE u.id IS NOT NULL) as participants
+        FROM meeting_participants mp
+        JOIN users u ON mp.user_id = u.id
+        WHERE mp.meeting_id IN (SELECT id FROM meeting_base)
+        GROUP BY mp.meeting_id
       )
-      GROUP BY m.id, m.title, m.description, m.start_time, m.end_time, 
-               m.room_id, m.created_by, m.created_at, m.updated_at
-      ORDER BY m.start_time ASC
+      SELECT
+        mb.*,
+        COALESCE(pa.participants, '[]'::json) as participants
+      FROM meeting_base mb
+      LEFT JOIN participants_agg pa ON mb.id = pa.meeting_id
+      ORDER BY mb.start_time ASC
     `, [userId]);
 
     // Format response - participants is already a JSON array
