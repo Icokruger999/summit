@@ -66,7 +66,10 @@ export function useMessageWebSocket({
     isIntentionallyClosedRef.current = false;
 
     try {
-      const ws = new WebSocket(`ws://localhost:3000/ws?token=${token}`);
+      // Use production API URL, convert http/https to ws/wss
+      const apiUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+      const wsUrl = apiUrl.replace(/^http/, "ws") + "/ws";
+      const ws = new WebSocket(`${wsUrl}?token=${token}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
