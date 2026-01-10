@@ -26,13 +26,23 @@ frontend:
         - pwd
         - |
           # Set production API URL - CRITICAL for WebSocket and API calls
+          # This MUST be set before npm run build so Vite compiles it into the bundle
           export VITE_SERVER_URL=https://summit-api.codingeverest.com
           echo "✅ VITE_SERVER_URL set to: $VITE_SERVER_URL"
-          echo "⚠️  Building with production API endpoint - no localhost fallback"
+          echo "⚠️  Building with production API endpoint"
+          echo "📝 Note: .env.production provides fallback if this fails"
+        - |
+          # Verify environment variable is set before build
+          if [ -z "$VITE_SERVER_URL" ]; then
+            echo "❌ ERROR: VITE_SERVER_URL is not set!"
+            exit 1
+          fi
+          echo "✅ VITE_SERVER_URL verified: $VITE_SERVER_URL"
         - npm run build
         - |
           # Verify environment variable was set during build
           echo "Build completed with VITE_SERVER_URL=$VITE_SERVER_URL"
+          echo "✅ Build verification complete"
         - echo "Build completed!"
         - ls -la dist/ || echo "Dist folder missing"
         - test -f dist/index.html && echo "index.html found" || echo "index.html missing"
