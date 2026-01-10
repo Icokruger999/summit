@@ -11,7 +11,8 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
     const userId = req.user!.id;
 
     // Optimized: Get meetings and participants in a single query using JSON aggregation
-    // Note: recurrence (JSONB) cannot be in GROUP BY, so we use MAX() to get it (all rows have same value per meeting)
+    // Note: recurrence (JSONB) cannot be in GROUP BY, so we use MIN() which works with JSONB
+    // All rows have the same recurrence value per meeting, so MIN/MAX both work
     const result = await query(`
       SELECT
         m.id,
@@ -21,7 +22,7 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
         m.end_time,
         m.room_id,
         m.created_by,
-        MAX(m.recurrence) as recurrence,
+        MIN(m.recurrence) as recurrence,
         m.created_at,
         m.updated_at,
         COALESCE(
