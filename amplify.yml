@@ -10,7 +10,7 @@ frontend:
       commands:
         - echo "Building Summit React application..."
         - cd desktop
-        - echo "VITE_SERVER_URL=https://summit-api.codingeverest.com/api" > .env.production
+        - echo "VITE_SERVER_URL=https://summit-api.codingeverest.com" > .env.production
         - npm run build
         - echo "Build completed!"
         - echo "Contents of dist folder:"
