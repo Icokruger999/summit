@@ -6,25 +6,33 @@ frontend:
         - echo "=== Summit React App Build ===" 
         - node --version
         - npm --version
+        - echo "Current directory:"
+        - pwd
+        - echo "Listing directories:"
+        - ls -la
         - echo "Installing dependencies..."
-        - cd desktop && npm install --legacy-peer-deps --omit=optional --ignore-scripts
-        - echo "Dependencies installed!"
+        - if [ -d "desktop" ]; then cd desktop && npm install --legacy-peer-deps --omit=optional --ignore-scripts && echo "Dependencies installed!"; else echo "ERROR: desktop directory not found!" && exit 1; fi
     build:
       commands:
         - echo "Building React application..."
-        - cd desktop
+        - echo "Current directory before cd:"
         - pwd
+        - echo "Listing directories:"
+        - ls -la
+        - if [ ! -d "desktop" ]; then echo "ERROR: desktop directory not found!" && exit 1; fi
+        - cd desktop
+        - echo "Current directory after cd:"
+        - pwd
+        - echo "Listing desktop directory contents:"
         - ls -la | head -20
         - export VITE_SERVER_URL=https://summit-api.codingeverest.com
         - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
         - echo "Running build command..."
-        - npm run build 2>&1
+        - npm run build
         - echo "Build command completed!"
         - echo "Checking build output..."
-        - ls -la dist/ 2>&1 || echo "❌ Dist folder missing"
+        - ls -la dist/ || echo "❌ Dist folder missing"
         - test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing"
-        - echo "Build artifacts:"
-        - find dist -type f -name "*.html" -o -name "*.js" -o -name "*.css" 2>&1 | head -10 || echo "No artifacts found"
   artifacts:
     baseDirectory: desktop/dist
     files:
