@@ -31,21 +31,8 @@ Write-Host "Step 3: Deploying to EC2 via SSM..." -ForegroundColor Cyan
 $instanceId = "i-06bc5b2218c041802"
 $region = "eu-west-1"
 
-# Create deployment commands JSON file
-$commands = @(
-    "cd /var/www/summit",
-    "git pull origin main",
-    "cd server",
-    "npm run build",
-    "pm2 restart summit",
-    "sleep 3",
-    "pm2 list | grep summit"
-)
-$jsonObj = @{commands = $commands}
-$jsonObj | ConvertTo-Json | Out-File -FilePath deploy-workflow-commands.json -Encoding utf8 -NoNewline -Force
-
-Write-Host "Sending SSM deployment command..." -ForegroundColor Yellow
-$result = aws ssm send-command --instance-ids $instanceId --document-name "AWS-RunShellScript" --parameters file://deploy-workflow-commands.json --region $region --output json 2>&1
+Write-Host "Using deploy-summit-backend.json..." -ForegroundColor Yellow
+$result = aws ssm send-command --instance-ids $instanceId --document-name "AWS-RunShellScript" --parameters file://deploy-summit-backend.json --region $region --output json 2>&1
 
 if ($LASTEXITCODE -eq 0) {
     $parsed = $result | ConvertFrom-Json
