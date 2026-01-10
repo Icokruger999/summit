@@ -220,6 +220,7 @@ export default function CreateMeetingModal({
         start_time: startTime,
         end_time: endTime,
         participant_ids: selectedParticipants,
+        dont_include_creator: dontIncludeCreator,
       };
 
       // Add recurrence if enabled
@@ -231,6 +232,10 @@ export default function CreateMeetingModal({
       }
 
       await meetingsApi.create(meetingData);
+      
+      // Trigger refresh of meetings list
+      window.dispatchEvent(new CustomEvent('refreshMeetings'));
+      
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -499,6 +504,25 @@ export default function CreateMeetingModal({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Don't Include Creator Option */}
+            <div>
+              <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dontIncludeCreator}
+                  onChange={(e) => setDontIncludeCreator(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <div className="flex items-center gap-2 flex-1">
+                  <Users className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <span className="font-medium text-gray-900">Don't Include Me</span>
+                    <p className="text-xs text-gray-500 mt-1">You won't be added as a participant to this meeting</p>
+                  </div>
+                </div>
+              </label>
             </div>
 
             {/* Repeat Meeting */}

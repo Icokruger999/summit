@@ -74,7 +74,7 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
 router.post("/", authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
-    const { title, description, start_time, end_time, participant_ids, recurrence } = req.body;
+    const { title, description, start_time, end_time, participant_ids, recurrence, dont_include_creator } = req.body;
 
     // Generate room_id for LiveKit
     const room_id = `meeting-${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -88,12 +88,14 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
 
     const meeting = meetingResult.rows[0];
 
-    // Always add creator as a participant (so they see the meeting in their list)
-    await query(`
-      INSERT INTO meeting_participants (meeting_id, user_id, status)
-      VALUES ($1, $2, 'accepted')
-      ON CONFLICT (meeting_id, user_id) DO UPDATE SET status = 'accepted'
-    `, [meeting.id, userId]);
+    // Add creator as participant only if not excluded
+    if (!dont_include_creator) {
+      await query(`
+        INSERT INTO meeting_participants (meeting_id, user_id, status)
+        VALUES ($1, $2, 'accepted')
+        ON CONFLICT (meeting_id, user_id) DO UPDATE SET status = 'accepted'
+      `, [meeting.id, userId]);
+    }
 
     // Add participants (OPTIMIZED: Batch insert instead of loop)
     if (participant_ids && participant_ids.length > 0) {
