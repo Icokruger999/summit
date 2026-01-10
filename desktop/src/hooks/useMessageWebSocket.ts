@@ -66,12 +66,19 @@ export function useMessageWebSocket({
     isIntentionallyClosedRef.current = false;
 
     try {
-      // Use production API URL, convert http/https to ws/wss
-      const apiUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+      // Use production API URL - MUST be set in environment (Amplify)
+      const apiUrl = import.meta.env.VITE_SERVER_URL;
+      if (!apiUrl) {
+        console.error("❌ VITE_SERVER_URL is not set! WebSocket cannot connect.");
+        throw new Error("VITE_SERVER_URL environment variable is required");
+      }
+      
       // Convert https:// to wss:// and http:// to ws://
       const wsUrl = apiUrl.replace(/^https?:\/\//, (match) => {
         return match === "https://" ? "wss://" : "ws://";
       }).replace(/\/$/, ""); // Remove trailing slash if present
+      
+      console.log("🔌 Connecting WebSocket to:", `${wsUrl}/ws`);
       const ws = new WebSocket(`${wsUrl}/ws?token=${token}`);
       wsRef.current = ws;
 

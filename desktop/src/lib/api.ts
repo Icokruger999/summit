@@ -1,6 +1,10 @@
 // API client for backend communication
+// NOTE: VITE_SERVER_URL MUST be set in environment (configured in amplify.yml for production)
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+if (!SERVER_URL && import.meta.env.MODE === "production") {
+  console.error("❌ VITE_SERVER_URL is not set! API calls will fail.");
+}
 
 export interface ApiResponse<T> {
   data?: T;

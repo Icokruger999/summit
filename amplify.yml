@@ -24,9 +24,15 @@ frontend:
             cd desktop
           fi
         - pwd
-        - export VITE_SERVER_URL=https://summit-api.codingeverest.com
-        - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
+        - |
+          # Set production API URL - CRITICAL for WebSocket and API calls
+          export VITE_SERVER_URL=https://summit-api.codingeverest.com
+          echo "✅ VITE_SERVER_URL set to: $VITE_SERVER_URL"
+          echo "⚠️  Building with production API endpoint - no localhost fallback"
         - npm run build
+        - |
+          # Verify environment variable was set during build
+          echo "Build completed with VITE_SERVER_URL=$VITE_SERVER_URL"
         - echo "Build completed!"
         - ls -la dist/ || echo "Dist folder missing"
         - test -f dist/index.html && echo "index.html found" || echo "index.html missing"
