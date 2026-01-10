@@ -12,10 +12,12 @@ frontend:
             cd desktop
             # Remove node_modules and package-lock.json for clean install
             rm -rf node_modules package-lock.json 2>/dev/null || true
-            # Install dependencies - allow optional deps for rollup, skip scripts for Tauri
+            # Install all dependencies including optional (needed for rollup)
             npm install --legacy-peer-deps --ignore-scripts
-            # Explicitly install rollup's Linux optional dependency if missing
-            npm install @rollup/rollup-linux-x64-gnu --save-optional --ignore-scripts 2>/dev/null || echo "Rollup optional dep install attempted"
+            # Force install rollup's Linux native dependency
+            npm install @rollup/rollup-linux-x64-gnu --no-save --ignore-scripts || npm install @rollup/rollup-linux-x64-gnu --ignore-scripts || true
+            # Verify rollup installation
+            ls -la node_modules/@rollup/ 2>/dev/null | head -3 || echo "Warning: rollup not found"
             echo "Dependencies installed!"
           else
             echo "ERROR: desktop directory not found!"
@@ -40,7 +42,8 @@ frontend:
         - echo "Current directory after check:"
         - pwd
         - echo "Verifying rollup is available:"
-        - ls -la node_modules/@rollup/ 2>/dev/null | head -5 || echo "Checking rollup installation..."
+        - ls -la node_modules/rollup/ 2>/dev/null | head -3 || echo "Checking rollup..."
+        - ls -la node_modules/@rollup/rollup-linux-x64-gnu/ 2>/dev/null || echo "Checking rollup Linux dep..."
         - export VITE_SERVER_URL=https://summit-api.codingeverest.com
         - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
         - echo "Running build command..."
