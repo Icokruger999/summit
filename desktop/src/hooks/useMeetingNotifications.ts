@@ -194,6 +194,9 @@ export function useMeetingNotifications(userId: string) {
       const { meetingsApi } = await import("../lib/api");
       await meetingsApi.acceptInvitation(invitationId);
       dismissInvitation(invitationId);
+      
+      // Trigger refresh of meetings list
+      window.dispatchEvent(new CustomEvent('refreshMeetings'));
     } catch (error) {
       console.error("Error accepting invitation:", error);
     }

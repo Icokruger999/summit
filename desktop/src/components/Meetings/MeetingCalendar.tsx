@@ -33,6 +33,17 @@ export default function MeetingCalendar({
 
   useEffect(() => {
     loadMeetings();
+    
+    // Listen for meeting refresh events (e.g., after accepting invitation)
+    const handleRefreshMeetings = () => {
+      console.log("🔄 Refreshing meetings due to event");
+      loadMeetings();
+    };
+    window.addEventListener('refreshMeetings' as any, handleRefreshMeetings as EventListener);
+    
+    return () => {
+      window.removeEventListener('refreshMeetings' as any, handleRefreshMeetings as EventListener);
+    };
   }, [userId]);
 
   const loadMeetings = async () => {

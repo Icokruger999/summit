@@ -88,6 +88,13 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
 
     const meeting = meetingResult.rows[0];
 
+    // Always add creator as a participant (so they see the meeting in their list)
+    await query(`
+      INSERT INTO meeting_participants (meeting_id, user_id, status)
+      VALUES ($1, $2, 'accepted')
+      ON CONFLICT (meeting_id, user_id) DO UPDATE SET status = 'accepted'
+    `, [meeting.id, userId]);
+
     // Add participants (OPTIMIZED: Batch insert instead of loop)
     if (participant_ids && participant_ids.length > 0) {
       // Batch insert participants
