@@ -1,0 +1,29 @@
+{
+  "commands": [
+    "echo '=== Diagnosing WebSocket Issues ==='",
+    "echo ''",
+    "echo '1. Checking if backend is running...'",
+    "pm2 list | grep summit || echo 'Backend not running in PM2'",
+    "echo ''",
+    "echo '2. Checking if port 4000 is listening...'",
+    "sudo netstat -tlnp | grep :4000 || sudo ss -tlnp | grep :4000 || echo 'Port 4000 not listening'",
+    "echo ''",
+    "echo '3. Checking nginx configuration...'",
+    "if [ -f /etc/nginx/sites-available/summit-api ]; then",
+    "  echo 'Nginx config found. Checking for WebSocket headers...'",
+    "  grep -A 5 'location /ws' /etc/nginx/sites-available/summit-api || echo 'WebSocket location NOT FOUND in nginx config!'",
+    "else",
+    "  echo '⚠️  Nginx config NOT FOUND: /etc/nginx/sites-available/summit-api'",
+    "fi",
+    "echo ''",
+    "echo '4. Testing nginx config syntax...'",
+    "sudo nginx -t 2>&1",
+    "echo ''",
+    "echo '5. Checking if nginx is running...'",
+    "sudo systemctl status nginx --no-pager -l | head -5",
+    "echo ''",
+    "echo '6. Checking backend logs for WebSocket connections...'",
+    "pm2 logs summit --lines 10 --nostream 2>/dev/null | grep -i websocket || echo 'No WebSocket logs found'"
+  ]
+}
+
