@@ -8,48 +8,26 @@ frontend:
         - npm --version
         - echo "Installing dependencies..."
         - |
-          if [ -d "desktop" ]; then
-            cd desktop
-            # Remove node_modules and package-lock.json for clean install
-            rm -rf node_modules package-lock.json 2>/dev/null || true
-            # Install all dependencies including optional (needed for rollup)
-            npm install --legacy-peer-deps --ignore-scripts
-            # Force install rollup's Linux native dependency
-            npm install @rollup/rollup-linux-x64-gnu --no-save --ignore-scripts || npm install @rollup/rollup-linux-x64-gnu --ignore-scripts || true
-            # Verify rollup installation
-            ls -la node_modules/@rollup/ 2>/dev/null | head -3 || echo "Warning: rollup not found"
-            echo "Dependencies installed!"
-          else
-            echo "ERROR: desktop directory not found!"
-            exit 1
-          fi
+          cd desktop
+          rm -rf node_modules package-lock.json 2>/dev/null || true
+          npm install --legacy-peer-deps --ignore-scripts
+          npm install @rollup/rollup-linux-x64-gnu --save-optional --ignore-scripts || true
+          npm install @rollup/rollup-linux-arm64-gnu --save-optional --ignore-scripts || true
+          echo "Dependencies installed!"
     build:
       commands:
         - echo "Building React application..."
-        - echo "Current directory:"
-        - pwd
         - |
-          # Check if we're already in desktop directory or need to cd into it
           if [ -f "package.json" ]; then
-            echo "Already in desktop directory (package.json found)"
-          elif [ -d "desktop" ]; then
-            echo "Changing to desktop directory..."
-            cd desktop
+            echo "Already in desktop directory"
           else
-            echo "ERROR: Neither in desktop directory nor desktop folder found!"
-            exit 1
+            cd desktop
           fi
-        - echo "Current directory after check:"
         - pwd
-        - echo "Verifying rollup is available:"
-        - ls -la node_modules/rollup/ 2>/dev/null | head -3 || echo "Checking rollup..."
-        - ls -la node_modules/@rollup/rollup-linux-x64-gnu/ 2>/dev/null || echo "Checking rollup Linux dep..."
         - export VITE_SERVER_URL=https://summit-api.codingeverest.com
         - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
-        - echo "Running build command..."
         - npm run build
-        - echo "Build command completed!"
-        - echo "Checking build output..."
+        - echo "Build completed!"
         - ls -la dist/ || echo "Dist folder missing"
         - test -f dist/index.html && echo "index.html found" || echo "index.html missing"
   artifacts:
