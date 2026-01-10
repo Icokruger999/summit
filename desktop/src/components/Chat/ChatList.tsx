@@ -161,9 +161,18 @@ export default function ChatList({
 
     window.addEventListener('messageUpdate' as any, handleMessageUpdate as EventListener);
     window.addEventListener('chatCreated' as any, handleChatCreated as EventListener);
+    
+    // Listen for reload request (e.g., when WebSocket receives message for new chat)
+    const handleReloadChats = () => {
+      console.log("🔄 Reloading chats due to reloadChats event");
+      loadChats(false, false); // Reload without cache
+    };
+    window.addEventListener('reloadChats' as any, handleReloadChats as EventListener);
+
     return () => {
       window.removeEventListener('messageUpdate' as any, handleMessageUpdate as EventListener);
       window.removeEventListener('chatCreated' as any, handleChatCreated as EventListener);
+      window.removeEventListener('reloadChats' as any, handleReloadChats as EventListener);
     };
   }, [loadChats, chats]); // Add chats to dependencies so we can check current state
 
