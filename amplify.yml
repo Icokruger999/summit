@@ -5,7 +5,7 @@ frontend:
       commands:
         - echo "Installing dependencies for Summit React app..."
         - cd desktop
-        - npm ci
+        - npm install
     build:
       commands:
         - echo "Building Summit React application..."
@@ -14,7 +14,9 @@ frontend:
         - npm run build
         - echo "Build completed!"
         - echo "Contents of dist folder:"
-        - ls -la dist/
+        - ls -la dist/ || echo "Dist folder not found - build may have failed"
+        - echo "Checking for index.html in dist:"
+        - test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing"
   artifacts:
     baseDirectory: desktop/dist
     files:
@@ -22,4 +24,3 @@ frontend:
   cache:
     paths:
       - desktop/node_modules/**/*
-      - desktop/.npm/**/*
