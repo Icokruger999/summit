@@ -1,0 +1,17 @@
+{
+    "Changes":  [
+                    {
+                        "ResourceRecordSet":  {
+                                                  "TTL":  300,
+                                                  "Name":  "summit-api.codingeverest.com.",
+                                                  "Type":  "A",
+                                                  "ResourceRecords":  [
+                                                                          {
+                                                                              "Value":  "34.246.3.141"
+                                                                          }
+                                                                      ]
+                                              },
+                        "Action":  "UPSERT"
+                    }
+                ]
+}

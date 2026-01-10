@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "cd /var/www/summit",
+    "grep CORS_ORIGIN .env 2>/dev/null || echo 'CORS_ORIGIN not found in .env'",
+    "sudo sed -i '/CORS_ORIGIN/d' .env 2>/dev/null || echo 'Removing old CORS_ORIGIN'",
+    "echo 'CORS_ORIGIN=https://summit.codingeverest.com,https://www.codingeverest.com,https://codingeverest.com' | sudo tee -a .env",
+    "pm2 restart summit",
+    "sleep 3",
+    "pm2 list | grep summit",
+    "echo '✅ Backend restarted with updated CORS'"
+  ]
+}
+

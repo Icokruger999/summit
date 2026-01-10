@@ -1,0 +1,137 @@
+<!-- 
+Summit Login Button Snippet
+Add this to your codingeverest.com landing page where you want the Summit login button
+Replace the existing "Download Summit" placeholder with this code
+-->
+
+<!-- Basic Button (Simple Integration) -->
+<div class="summit-section" style="text-align: center; margin: 40px 0;">
+    <h2 style="color: #667eea; font-size: 32px; margin-bottom: 10px;">Summit</h2>
+    <p style="color: #666; font-size: 16px; margin-bottom: 20px;">
+        Secure Video Conferencing & Team Chat
+    </p>
+    <a href="/summit/login" 
+       class="btn-summit-login" 
+       style="
+           display: inline-block;
+           padding: 14px 32px;
+           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+           color: white;
+           text-decoration: none;
+           border-radius: 10px;
+           font-weight: 600;
+           font-size: 16px;
+           transition: transform 0.3s ease, box-shadow 0.3s ease;
+           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+       "
+       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)';"
+       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';">
+        Login to Summit →
+    </a>
+</div>
+
+<!-- Alternative: Full Feature Card -->
+<div class="summit-card" style="
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    color: white;
+    text-align: center;
+">
+    <h2 style="font-size: 36px; margin-bottom: 10px; color: white;">Summit</h2>
+    <p style="font-size: 18px; margin-bottom: 10px; opacity: 0.95;">
+        Enterprise-Grade Video Conferencing
+    </p>
+    <p style="font-size: 14px; margin-bottom: 30px; opacity: 0.9;">
+        Secure messaging • HD video calls • Screen sharing • Real-time collaboration
+    </p>
+    
+    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <a href="/summit/login" 
+           style="
+               display: inline-block;
+               padding: 14px 28px;
+               background: white;
+               color: #667eea;
+               text-decoration: none;
+               border-radius: 10px;
+               font-weight: 600;
+               font-size: 16px;
+               transition: transform 0.3s ease;
+           "
+           onmouseover="this.style.transform='scale(1.05)';"
+           onmouseout="this.style.transform='scale(1)';">
+            Login Now →
+        </a>
+        
+        <a href="/summit/login#register" 
+           style="
+               display: inline-block;
+               padding: 14px 28px;
+               background: rgba(255, 255, 255, 0.2);
+               color: white;
+               text-decoration: none;
+               border-radius: 10px;
+               font-weight: 600;
+               font-size: 16px;
+               border: 2px solid white;
+               transition: transform 0.3s ease, background 0.3s ease;
+           "
+           onmouseover="this.style.transform='scale(1.05)'; this.style.background='rgba(255, 255, 255, 0.3)';"
+           onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(255, 255, 255, 0.2)';">
+            Create Account
+        </a>
+    </div>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.3);">
+        <p style="font-size: 13px; opacity: 0.8; margin-bottom: 10px;">
+            ✓ End-to-end encryption  •  ✓ Self-hosted  •  ✓ GDPR compliant
+        </p>
+    </div>
+</div>
+
+<!-- Alternative: Inline Button (Minimal) -->
+<a href="/summit/login" 
+   class="summit-btn-inline"
+   style="
+       display: inline-block;
+       padding: 12px 24px;
+       background: #667eea;
+       color: white;
+       text-decoration: none;
+       border-radius: 8px;
+       font-weight: 600;
+       transition: background 0.3s ease;
+   "
+   onmouseover="this.style.background='#5568d3';"
+   onmouseout="this.style.background='#667eea';">
+    Access Summit
+</a>
+
+<!--
+Integration Notes:
+1. Choose ONE of the styles above that fits your design
+2. Replace your existing "Download Summit" section
+3. The link /summit/login will work after nginx configuration is complete
+4. You can customize colors, sizes, and text to match your branding
+5. For React/Vue/other frameworks, convert inline styles to classes
+
+Example placement in your existing HTML:
+<section id="products">
+    <div class="product">
+        <h3>Milo</h3>
+        <p>Your existing Milo description</p>
+        <a href="/milo">Learn More</a>
+    </div>
+    
+    <div class="product">
+        <h3>Summit</h3>
+        <p>Secure video conferencing and team collaboration</p>
+        <!-- ADD ONE OF THE ABOVE BUTTON STYLES HERE -->
+    </div>
+</section>
+-->
+

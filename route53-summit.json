@@ -1,0 +1,17 @@
+﻿{
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "summit.codingeverest.com",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "d1mhd5fnnjyucj.amplifyapp.com"
+          }
+        ]
+      }
+    }
+  ]
+}

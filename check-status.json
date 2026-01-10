@@ -1,0 +1,4 @@
+{
+  "commands": ["pm2 list"]
+}
+

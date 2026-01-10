@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-60000:50000-60000/udp"
+    command: --dev
+    environment:
+      - LIVEKIT_KEYS=devkey: devsecret
+

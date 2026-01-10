@@ -1,0 +1,8 @@
+{
+  "commands": [
+    "sudo certbot certonly --standalone -d summit-api.codingeverest.com --non-interactive --agree-tos --email admin@codingeverest.com --preferred-challenges http 2>&1",
+    "ls -la /etc/letsencrypt/live/summit-api.codingeverest.com/ 2>/dev/null && echo 'Certificate created' || echo 'Certificate not found'",
+    "if [ -d /etc/letsencrypt/live/summit-api.codingeverest.com ]; then sudo sed -i 's|ssl_certificate /etc/letsencrypt/live/api.codingeverest.com/fullchain.pem|ssl_certificate /etc/letsencrypt/live/summit-api.codingeverest.com/fullchain.pem|g' /etc/nginx/conf.d/summit-api.conf; sudo sed -i 's|ssl_certificate_key /etc/letsencrypt/live/api.codingeverest.com/privkey.pem|ssl_certificate_key /etc/letsencrypt/live/summit-api.codingeverest.com/privkey.pem|g' /etc/nginx/conf.d/summit-api.conf; sudo nginx -t && sudo systemctl reload nginx && echo '✅ SSL certificate updated in nginx' || echo '❌ Nginx reload failed'; else echo 'Certificate not ready yet'; fi"
+  ]
+}
+

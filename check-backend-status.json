@@ -1,0 +1,12 @@
+{
+  "comment": "Check backend status and restart if needed",
+  "commands": [
+    "cd /var/www/summit || cd ~/summit || cd /home/ubuntu/summit || echo 'Directory not found'",
+    "pm2 list",
+    "pm2 describe summit || echo 'Summit process not found'",
+    "pm2 logs summit --lines 10 --nostream || echo 'Could not fetch logs'",
+    "netstat -tlnp 2>/dev/null | grep -E ':(4000|3000)' || ss -tlnp 2>/dev/null | grep -E ':(4000|3000)' || echo 'Port check failed'",
+    "PGPASSWORD='Stacey1122' psql -h codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com -p 5432 -U postgres -d Summit -c 'SELECT current_database(), version();' 2>&1 || echo 'Database connection failed'"
+  ]
+}
+
