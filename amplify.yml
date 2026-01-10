@@ -1,25 +1,15 @@
 version: 1
 frontend:
   phases:
-    preBuild:
-      commands:
-        - echo "Checking files in repository..."
-        - ls -la
-        - test -f index.html && echo "✅ index.html found in repo" || echo "❌ index.html NOT in repo"
     build:
       commands:
-        - echo "Building Summit frontend..."
-        - echo "Current directory:"
-        - pwd
-        - echo "Files in current directory:"
+        - echo "Deploying static HTML files"
         - ls -la
-        - echo "Checking for index.html:"
-        - test -f index.html && echo "✅ index.html exists" || echo "❌ index.html missing"
-        - echo "Deploying all files..."
+        - test -f index.html && echo "✅ index.html found" || echo "❌ index.html missing"
   artifacts:
-    baseDirectory: /
     files:
-      - '**/*'
+      - 'index.html'
+      - 'app/**/*'
   cache:
     paths: []
 
