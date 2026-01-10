@@ -138,4 +138,39 @@ After deployment, test:
 3. ✅ New meetings appear in calendar immediately
 4. ✅ Contact search works (case-insensitive)
 5. ✅ WebSocket connects without 1006 error
+6. ✅ No localhost connections in production builds
+7. ✅ All API calls go to production server (summit-api.codingeverest.com)
+
+## Web Build Configuration
+
+### Critical: No Localhost Fallbacks
+
+**For web builds, we MUST:**
+- ✅ Remove all `localhost:3000` or `localhost:4000` fallbacks
+- ✅ Require `VITE_SERVER_URL` environment variable
+- ✅ Set `VITE_SERVER_URL=https://summit-api.codingeverest.com` in `amplify.yml`
+- ✅ Ensure nginx has WebSocket upgrade headers for `/ws` endpoint
+
+**Files Fixed:**
+- `desktop/src/hooks/useMessageWebSocket.ts` - Removed localhost fallback
+- `desktop/src/lib/api.ts` - Removed localhost fallback, added validation
+- `desktop/src/hooks/useLiveKit.ts` - Removed localhost fallback
+- `desktop/src/hooks/useBackgroundChatConnections.ts` - Removed localhost fallback
+- `desktop/src/components/Chat/FileAttachment.tsx` - Removed localhost fallback
+- `desktop/src/hooks/usePresence.ts` - Removed localhost fallback
+- `desktop/vite.config.ts` - No proxy configuration (web builds connect directly)
+- `amplify.yml` - Explicitly sets `VITE_SERVER_URL` during build
+
+### Nginx WebSocket Configuration
+
+**Location:** `/etc/nginx/sites-available/summit-api` or similar
+
+**Required Settings for `/ws` location:**
+- `proxy_set_header Upgrade $http_upgrade;`
+- `proxy_set_header Connection "upgrade";`
+- `proxy_buffering off;` (CRITICAL)
+- Extended timeouts (86400s for long-lived connections)
+- MUST come BEFORE `/api` location block
+
+**See:** `summit-api-nginx.conf` for complete configuration
 
