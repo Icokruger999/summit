@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summit - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .welcome {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .user-info {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Summit</h1>
+        <div class="welcome">You're successfully logged in!</div>
+
+        <div id="userInfo" class="user-info">
+            <strong>Loading user information...</strong>
+        </div>
+
+        <div class="info-box">
+            <h3>🎉 Login Successful!</h3>
+            <p>This is a placeholder for the Summit desktop application.</p>
+            <p><strong>Next Steps:</strong></p>
+            <ul style="margin: 10px 0 10px 20px;">
+                <li>Download and install the Summit desktop app</li>
+                <li>Or integrate this page with your Summit web interface</li>
+                <li>The desktop app will auto-detect your login session</li>
+            </ul>
+        </div>
+
+        <div class="info-box" style="background: #fff3e0; border-color: #ff9800;">
+            <h3>📱 Desktop App Integration</h3>
+            <p>To use the full Summit experience:</p>
+            <ol style="margin: 10px 0 10px 20px;">
+                <li>Download the Summit desktop application</li>
+                <li>Launch the app - it will detect your login automatically</li>
+                <li>Start video calls, send messages, and collaborate!</li>
+            </ol>
+        </div>
+
+        <div>
+            <button class="btn" onclick="downloadApp()">Download Desktop App</button>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.codingeverest.com/api';
+
+        // Check if user is logged in
+        const token = localStorage.getItem('summit_token');
+        const userStr = localStorage.getItem('summit_user');
+
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        // Display user info
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                document.getElementById('userInfo').innerHTML = `
+                    <strong>Account Information:</strong><br>
+                    Name: ${user.name || 'Not set'}<br>
+                    Email: ${user.email}<br>
+                    User ID: ${user.id}
+                `;
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+            }
+        }
+
+        // Verify token with backend
+        async function verifyToken() {
+            try {
+                const response = await fetch(`${API_URL}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Token invalid');
+                }
+
+                const user = await response.json();
+                localStorage.setItem('summit_user', JSON.stringify(user));
+                
+                document.getElementById('userInfo').innerHTML = `
+                    <strong>Account Information:</strong><br>
+                    Name: ${user.name || 'Not set'}<br>
+                    Email: ${user.email}<br>
+                    Company: ${user.company || 'Not set'}<br>
+                    User ID: ${user.id}
+                `;
+            } catch (error) {
+                console.error('Token verification failed:', error);
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Session expired. Please login again.';
+                setTimeout(() => {
+                    logout();
+                }, 2000);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('summit_token');
+            localStorage.removeItem('summit_user');
+            window.location.href = '/';
+        }
+
+        function downloadApp() {
+            // This would link to your desktop app download
+            alert('Desktop app download will be available soon!\n\nFor now, you can run the Tauri desktop application locally.');
+            // window.location.href = '/downloads/summit-setup.exe';
+        }
+
+        // Verify token on load
+        verifyToken();
+    </script>
+</body>
+</html>
+
