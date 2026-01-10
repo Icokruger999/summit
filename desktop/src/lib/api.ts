@@ -276,8 +276,8 @@ export const messagesApi = {
     });
   },
 
-  getReadReceipts: async (messageIds: string[]) => {
-    return apiRequest<any[]>("/api/messages/reads", {
+  getReadReceipts: async (messageIds: string[]): Promise<Record<string, any[]>> => {
+    return apiRequest<Record<string, any[]>>("/api/messages/reads", {
       method: "POST",
       body: JSON.stringify({ messageIds }),
     });
