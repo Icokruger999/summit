@@ -18,7 +18,9 @@ export default function FileAttachment({ onFileSent }: FileAttachmentProps) {
     setProgress(0);
 
     try {
-      const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+      // Use production URL as fallback for web builds (not localhost)
+      const SERVER_URL = import.meta.env.VITE_SERVER_URL || 
+        (import.meta.env.MODE === "production" ? "https://summit-api.codingeverest.com" : undefined);
       if (!SERVER_URL) {
         alert("Server URL not configured. Please contact support.");
         return;
