@@ -11,7 +11,14 @@ frontend:
         - echo "Listing directories:"
         - ls -la
         - echo "Installing dependencies..."
-        - if [ -d "desktop" ]; then cd desktop && npm install --legacy-peer-deps --omit=optional --ignore-scripts && echo "Dependencies installed!"; else echo "ERROR: desktop directory not found!" && exit 1; fi
+        - |
+          if [ -d "desktop" ]; then
+            cd desktop && npm install --legacy-peer-deps --omit=optional --ignore-scripts
+            echo "Dependencies installed!"
+          else
+            echo "ERROR: desktop directory not found!"
+            exit 1
+          fi
     build:
       commands:
         - echo "Building React application..."
@@ -19,7 +26,11 @@ frontend:
         - pwd
         - echo "Listing directories:"
         - ls -la
-        - if [ ! -d "desktop" ]; then echo "ERROR: desktop directory not found!" && exit 1; fi
+        - |
+          if [ ! -d "desktop" ]; then
+            echo "ERROR: desktop directory not found!"
+            exit 1
+          fi
         - cd desktop
         - echo "Current directory after cd:"
         - pwd
@@ -31,8 +42,8 @@ frontend:
         - npm run build
         - echo "Build command completed!"
         - echo "Checking build output..."
-        - ls -la dist/ || echo "❌ Dist folder missing"
-        - test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing"
+        - ls -la dist/ || echo "Dist folder missing"
+        - test -f dist/index.html && echo "index.html found" || echo "index.html missing"
   artifacts:
     baseDirectory: desktop/dist
     files:
