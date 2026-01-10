@@ -10,10 +10,12 @@ frontend:
         - |
           if [ -d "desktop" ]; then
             cd desktop
-            # Remove package-lock.json and node_modules if they exist (for clean install)
+            # Remove node_modules and package-lock.json for clean install
             rm -rf node_modules package-lock.json 2>/dev/null || true
-            # Install dependencies (keep optional deps for rollup, but skip scripts for Tauri)
+            # Install dependencies - allow optional deps for rollup, skip scripts for Tauri
             npm install --legacy-peer-deps --ignore-scripts
+            # Explicitly install rollup's Linux optional dependency if missing
+            npm install @rollup/rollup-linux-x64-gnu --save-optional --ignore-scripts 2>/dev/null || echo "Rollup optional dep install attempted"
             echo "Dependencies installed!"
           else
             echo "ERROR: desktop directory not found!"
@@ -37,8 +39,8 @@ frontend:
           fi
         - echo "Current directory after check:"
         - pwd
-        - echo "Verifying we're in the right place:"
-        - ls -la | head -10
+        - echo "Verifying rollup is available:"
+        - ls -la node_modules/@rollup/ 2>/dev/null | head -5 || echo "Checking rollup installation..."
         - export VITE_SERVER_URL=https://summit-api.codingeverest.com
         - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
         - echo "Running build command..."
