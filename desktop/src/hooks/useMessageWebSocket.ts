@@ -80,7 +80,15 @@ export function useMessageWebSocket({
         return match === "https://" ? "wss://" : "ws://";
       }).replace(/\/$/, ""); // Remove trailing slash if present
       
+      // OPTION: Use Sec-WebSocket-Protocol instead of query string for better security
+      // This avoids exposing token in URL and may bypass WAF rules
+      // However, query string is also standard and works fine
+      // Using query string for now as it's simpler and well-supported
       console.log("🔌 Connecting WebSocket to:", `${wsUrl}/ws`);
+      
+      // Note: Token in query string is standard practice for WebSocket auth
+      // The browser WebSocket API doesn't support custom headers like Authorization
+      // Query string is the recommended workaround
       const ws = new WebSocket(`${wsUrl}/ws?token=${token}`);
       wsRef.current = ws;
 
