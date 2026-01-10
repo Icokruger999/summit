@@ -118,9 +118,9 @@ export default function CreateChatModal({
     }
   };
 
-  // Check if search query looks like an email
+  // Check if search query looks like an email (case-insensitive)
   const isEmailQuery = (query: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query.trim());
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(query.trim());
   };
 
   // Search user by email when query looks like an email
@@ -140,8 +140,13 @@ export default function CreateChatModal({
       setSearching(true);
       setSearchError(null);
       
+      // Normalize email to lowercase for API call (backend expects lowercase)
+      const normalizedEmail = trimmedQuery.toLowerCase();
+      console.log("🔍 Searching for email:", normalizedEmail);
+      
       try {
-        const user = await usersApi.searchByEmail(trimmedQuery);
+        const user = await usersApi.searchByEmail(normalizedEmail);
+        console.log("✅ User found:", user);
         setSearchResult(user);
         // If user found and not already in availableUsers, add them
         if (!availableUsers.find(u => u.id === user.id)) {
