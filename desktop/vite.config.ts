@@ -32,7 +32,6 @@ export default defineConfig(async () => ({
     outDir: "dist",
     assetsDir: "assets",
     sourcemap: false,
-    // Externalize Tauri packages for web builds
     rollupOptions: {
       output: {
         manualChunks: {
@@ -40,9 +39,6 @@ export default defineConfig(async () => ({
           livekit: ["livekit-client"],
         },
       },
-      external: isTauri ? [] : [
-        /^@tauri-apps\/.*/,
-      ],
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
