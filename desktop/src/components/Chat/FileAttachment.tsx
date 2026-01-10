@@ -18,7 +18,11 @@ export default function FileAttachment({ onFileSent }: FileAttachmentProps) {
     setProgress(0);
 
     try {
-      const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+      const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+      if (!SERVER_URL) {
+        alert("Server URL not configured. Please contact support.");
+        return;
+      }
       const token = getAuthToken();
       
       if (!token) {

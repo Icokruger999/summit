@@ -105,7 +105,7 @@ export function useUpdatePresence() {
       const token = localStorage.getItem("auth_token");
       if (token) {
         navigator.sendBeacon(
-          `${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/presence`,
+          `${import.meta.env.VITE_SERVER_URL || ""}/api/presence`,
           JSON.stringify({ status: "offline" })
         );
       }

@@ -2,8 +2,16 @@ import { useState, useCallback, useRef } from "react";
 import { Room, RoomOptions, RoomEvent } from "livekit-client";
 import { getAuthToken } from "../lib/api";
 
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || "ws://localhost:7880";
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+// LiveKit URL - for production should be set via environment variable
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
+
+// Server URL - MUST be set in production (via amplify.yml)
+// No localhost fallback for web builds to prevent local file connections
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+
+if (!SERVER_URL && import.meta.env.MODE === "production") {
+  console.error("❌ VITE_SERVER_URL is not set! LiveKit token requests will fail.");
+}
 
 export function useLiveKit() {
   const [room, setRoom] = useState<Room | null>(null);
