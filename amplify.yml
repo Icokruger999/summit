@@ -9,7 +9,11 @@ frontend:
         - echo "Installing dependencies..."
         - |
           if [ -d "desktop" ]; then
-            cd desktop && npm install --legacy-peer-deps --omit=optional --ignore-scripts
+            cd desktop
+            # Remove package-lock.json and node_modules if they exist (for clean install)
+            rm -rf node_modules package-lock.json 2>/dev/null || true
+            # Install dependencies (keep optional deps for rollup, but skip scripts for Tauri)
+            npm install --legacy-peer-deps --ignore-scripts
             echo "Dependencies installed!"
           else
             echo "ERROR: desktop directory not found!"
