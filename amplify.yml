@@ -4,12 +4,10 @@ frontend:
     build:
       commands:
         - echo "Deploying static HTML files"
-        - ls -la
-        - test -f index.html && echo "✅ index.html found" || echo "❌ index.html missing"
   artifacts:
+    baseDirectory: /
     files:
-      - 'index.html'
-      - 'app/**/*'
+      - '**/*'
   cache:
     paths: []
 
