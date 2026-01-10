@@ -30,6 +30,8 @@ Write-Host "✅ Monitor Amplify console for build status`n" -ForegroundColor Gre
 Write-Host "Step 3: Deploying to EC2 via SSM..." -ForegroundColor Cyan
 $instanceId = "i-06bc5b2218c041802"
 $region = "eu-west-1"
+
+# Create deployment commands JSON file
 $commands = @(
     "cd /var/www/summit",
     "git pull origin main",
@@ -39,8 +41,8 @@ $commands = @(
     "sleep 3",
     "pm2 list | grep summit"
 )
-$json = @{commands = $commands} | ConvertTo-Json
-$json | Out-File -FilePath deploy-workflow-commands.json -Encoding utf8 -Force
+$jsonObj = @{commands = $commands}
+$jsonObj | ConvertTo-Json | Out-File -FilePath deploy-workflow-commands.json -Encoding utf8 -NoNewline -Force
 
 Write-Host "Sending SSM deployment command..." -ForegroundColor Yellow
 $result = aws ssm send-command --instance-ids $instanceId --document-name "AWS-RunShellScript" --parameters file://deploy-workflow-commands.json --region $region --output json 2>&1
