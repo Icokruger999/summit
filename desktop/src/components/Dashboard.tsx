@@ -182,13 +182,19 @@ export default function Dashboard({ user }: DashboardProps) {
                 last_message: notification.content,
                 last_message_at: new Date(notification.timestamp).toISOString(),
                 last_message_sender_id: notification.senderId,
+                unreadCount: (c.unreadCount || 0) + (c.id === selectedChat ? 0 : 1),
+                hasUnread: c.id !== selectedChat,
               };
             }
             return c;
           })
         );
       } else {
-        // Chat not in list, reload chats to get it
+        // Chat not in list, trigger reload to get it
+        console.log("🔄 Chat not in list, reloading chats...");
+        window.dispatchEvent(new CustomEvent('reloadChats'));
+        
+        // Also dispatch messageUpdate for other listeners
         window.dispatchEvent(new CustomEvent('messageUpdate', {
           detail: {
             chatId: notification.chatId,

@@ -68,8 +68,11 @@ export function useMessageWebSocket({
     try {
       // Use production API URL, convert http/https to ws/wss
       const apiUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
-      const wsUrl = apiUrl.replace(/^http/, "ws") + "/ws";
-      const ws = new WebSocket(`${wsUrl}?token=${token}`);
+      // Convert https:// to wss:// and http:// to ws://
+      const wsUrl = apiUrl.replace(/^https?:\/\//, (match) => {
+        return match === "https://" ? "wss://" : "ws://";
+      }).replace(/\/$/, ""); // Remove trailing slash if present
+      const ws = new WebSocket(`${wsUrl}/ws?token=${token}`);
       wsRef.current = ws;
 
       ws.onopen = () => {

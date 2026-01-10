@@ -166,11 +166,16 @@ export default function CreateChatModal({
           // Silently handle status check errors
         });
       } catch (error: any) {
+        console.error("Search error:", error);
         const statusCode = error.response?.status;
+        const errorMessage = error.errorData?.error || error.message || error.error;
+        
         if (statusCode === 404) {
-          setSearchError("No user found with this email address");
+          setSearchError(errorMessage || "No user found with this email address");
+        } else if (statusCode === 400) {
+          setSearchError(errorMessage || "Invalid email address");
         } else {
-          setSearchError("Error searching for user. Please try again.");
+          setSearchError(errorMessage || "Error searching for user. Please try again.");
         }
         setSearchResult(null);
       } finally {
@@ -425,9 +430,11 @@ export default function CreateChatModal({
                     ) : searchError ? (
                       <div className="p-8 text-center">
                         <div className="text-red-500 mb-2">⚠️</div>
-                        <p className="text-sm text-gray-600">{searchError}</p>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Make sure the email address is correct and the user is registered.
+                        <p className="text-sm font-medium text-gray-700 mb-1">{searchError}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {searchError.includes("No user found") 
+                            ? "Make sure the email address is correct and the user is registered."
+                            : "Please check the email format and try again."}
                         </p>
                       </div>
                     ) : searchResult ? (
