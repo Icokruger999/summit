@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Summit - Dashboard</title>
+    <meta name="description" content="Summit Dashboard - Secure Video Conferencing & Team Collaboration">
     <style>
         * {
             margin: 0;
@@ -12,118 +13,344 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f5f7fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             min-height: 100vh;
+            background: linear-gradient(to bottom right, #eff6ff 0%, #ffffff 50%, #e0f2fe 100%);
             padding: 20px;
+            position: relative;
+        }
+
+        /* Grid pattern overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
         }
 
-        h1 {
-            color: #667eea;
-            margin-bottom: 10px;
+        /* Glass-morphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 1rem;
+            box-shadow: 
+                0 12px 40px 0 rgba(59, 130, 246, 0.2),
+                0 4px 16px 0 rgba(31, 38, 135, 0.15),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 0 rgba(255, 255, 255, 0.3);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            background: linear-gradient(to right, #2563eb, #0284c7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
 
         .welcome {
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 30px;
+            font-size: 1.125rem;
+            color: #6b7280;
+            margin-bottom: 1.5rem;
         }
 
         .info-box {
-            background: #f0f4ff;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            background: rgba(239, 246, 255, 0.8);
+            border-left: 4px solid #2563eb;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
+        .info-box.warning {
+            background: rgba(255, 251, 235, 0.8);
+            border-left-color: #f59e0b;
+        }
+
+        .info-box h3 {
+            color: #1e40af;
+            font-size: 1.125rem;
             font-weight: 600;
-            margin: 5px;
-            border: none;
-            cursor: pointer;
-            transition: background 0.3s;
+            margin-bottom: 0.5rem;
         }
 
-        .btn:hover {
-            background: #5568d3;
+        .info-box.warning h3 {
+            color: #92400e;
         }
 
-        .btn-secondary {
-            background: #95a5a6;
+        .info-box p {
+            color: #374151;
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
         }
 
-        .btn-secondary:hover {
-            background: #7f8c8d;
+        .info-box ul,
+        .info-box ol {
+            margin: 0.5rem 0 0.5rem 1.5rem;
+            color: #374151;
+            line-height: 1.8;
         }
 
         .user-info {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: rgba(236, 253, 245, 0.8);
+            border-left: 4px solid #10b981;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .user-info strong {
+            color: #065f46;
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .user-info span {
+            color: #374151;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(to right, #2563eb, #0284c7);
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            box-shadow: 0 8px 20px 0 rgba(37, 99, 235, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(to right, #64748b, #475569);
+            box-shadow: 0 4px 14px 0 rgba(100, 116, 139, 0.3);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            box-shadow: 0 8px 20px 0 rgba(100, 116, 139, 0.4);
         }
 
         .error {
-            background: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: rgba(254, 242, 242, 0.9);
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            display: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .error.show {
+            display: block;
+            animation: slideInFromTop 0.3s ease-out;
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success {
+            background: rgba(240, 253, 244, 0.9);
+            border-left: 4px solid #22c55e;
+            color: #166534;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            display: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding-top: 2rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .actions {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 10px;
+            }
+
+            .glass-card {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to Summit</h1>
-        <div class="welcome">You're successfully logged in!</div>
+        <div class="glass-card">
+            <div class="header">
+                <h1>Welcome to Summit</h1>
+                <div class="welcome">You're successfully logged in!</div>
+            </div>
 
-        <div id="userInfo" class="user-info">
-            <strong>Loading user information...</strong>
+            <div id="userInfo" class="user-info">
+                <strong>Loading user information...</strong>
+            </div>
+
+            <div class="info-box">
+                <h3>🎉 Login Successful!</h3>
+                <p>Welcome to your Summit dashboard. You're now ready to start collaborating!</p>
+                <p><strong>What you can do:</strong></p>
+                <ul>
+                    <li>Start video conferences with team members</li>
+                    <li>Send messages and chat in real-time</li>
+                    <li>Schedule and manage meetings</li>
+                    <li>Connect with your team seamlessly</li>
+                </ul>
+            </div>
+
+            <div class="info-box warning">
+                <h3>📱 Full Experience Available</h3>
+                <p>For the best Summit experience, download our desktop application:</p>
+                <ol>
+                    <li>Download the Summit desktop application</li>
+                    <li>Launch the app - it will detect your login automatically</li>
+                    <li>Enjoy full video conferencing, messaging, and collaboration features</li>
+                </ol>
+            </div>
+
+            <div class="actions">
+                <button class="btn" onclick="downloadApp()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Desktop App
+                </button>
+                <button class="btn btn-secondary" onclick="logout()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </button>
+            </div>
+
+            <div id="error" class="error"></div>
+            <div id="success" class="success"></div>
         </div>
 
-        <div class="info-box">
-            <h3>🎉 Login Successful!</h3>
-            <p>This is a placeholder for the Summit desktop application.</p>
-            <p><strong>Next Steps:</strong></p>
-            <ul style="margin: 10px 0 10px 20px;">
-                <li>Download and install the Summit desktop app</li>
-                <li>Or integrate this page with your Summit web interface</li>
-                <li>The desktop app will auto-detect your login session</li>
-            </ul>
+        <div class="footer">
+            <p>by Coding Everest • Powered by LiveKit</p>
         </div>
-
-        <div class="info-box" style="background: #fff3e0; border-color: #ff9800;">
-            <h3>📱 Desktop App Integration</h3>
-            <p>To use the full Summit experience:</p>
-            <ol style="margin: 10px 0 10px 20px;">
-                <li>Download the Summit desktop application</li>
-                <li>Launch the app - it will detect your login automatically</li>
-                <li>Start video calls, send messages, and collaborate!</li>
-            </ol>
-        </div>
-
-        <div>
-            <button class="btn" onclick="downloadApp()">Download Desktop App</button>
-            <button class="btn btn-secondary" onclick="logout()">Logout</button>
-        </div>
-
-        <div id="error" class="error" style="display: none;"></div>
     </div>
 
     <script>
@@ -138,15 +365,21 @@
         }
 
         // Display user info
+        function displayUserInfo(user) {
+            const userInfoEl = document.getElementById('userInfo');
+            userInfoEl.innerHTML = `
+                <strong>Account Information:</strong>
+                <span><strong>Name:</strong> ${user.name || 'Not set'}</span>
+                <span><strong>Email:</strong> ${user.email}</span>
+                ${user.company ? `<span><strong>Company:</strong> ${user.company}</span>` : ''}
+                <span><strong>User ID:</strong> ${user.id}</span>
+            `;
+        }
+
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
-                document.getElementById('userInfo').innerHTML = `
-                    <strong>Account Information:</strong><br>
-                    Name: ${user.name || 'Not set'}<br>
-                    Email: ${user.email}<br>
-                    User ID: ${user.id}
-                `;
+                displayUserInfo(user);
             } catch (e) {
                 console.error('Error parsing user data:', e);
             }
@@ -167,22 +400,30 @@
 
                 const user = await response.json();
                 localStorage.setItem('summit_user', JSON.stringify(user));
-                
-                document.getElementById('userInfo').innerHTML = `
-                    <strong>Account Information:</strong><br>
-                    Name: ${user.name || 'Not set'}<br>
-                    Email: ${user.email}<br>
-                    Company: ${user.company || 'Not set'}<br>
-                    User ID: ${user.id}
-                `;
+                displayUserInfo(user);
+                showSuccess('Session verified successfully!');
             } catch (error) {
                 console.error('Token verification failed:', error);
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('error').textContent = 'Session expired. Please login again.';
+                showError('Session expired. Please login again.');
                 setTimeout(() => {
                     logout();
                 }, 2000);
             }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+            setTimeout(() => {
+                successEl.classList.remove('show');
+            }, 3000);
         }
 
         function logout() {
@@ -193,7 +434,7 @@
 
         function downloadApp() {
             // This would link to your desktop app download
-            alert('Desktop app download will be available soon!\n\nFor now, you can run the Tauri desktop application locally.');
+            showSuccess('Desktop app download will be available soon!\n\nFor now, you can run the Summit desktop application locally.');
             // window.location.href = '/downloads/summit-setup.exe';
         }
 
@@ -202,4 +443,3 @@
     </script>
 </body>
 </html>
-
