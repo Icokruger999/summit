@@ -6,10 +6,6 @@ frontend:
         - echo "=== Summit React App Build ===" 
         - node --version
         - npm --version
-        - echo "Current directory:"
-        - pwd
-        - echo "Listing directories:"
-        - ls -la
         - echo "Installing dependencies..."
         - |
           if [ -d "desktop" ]; then
@@ -22,20 +18,23 @@ frontend:
     build:
       commands:
         - echo "Building React application..."
-        - echo "Current directory before cd:"
+        - echo "Current directory:"
         - pwd
-        - echo "Listing directories:"
-        - ls -la
         - |
-          if [ ! -d "desktop" ]; then
-            echo "ERROR: desktop directory not found!"
+          # Check if we're already in desktop directory or need to cd into it
+          if [ -f "package.json" ]; then
+            echo "Already in desktop directory (package.json found)"
+          elif [ -d "desktop" ]; then
+            echo "Changing to desktop directory..."
+            cd desktop
+          else
+            echo "ERROR: Neither in desktop directory nor desktop folder found!"
             exit 1
           fi
-        - cd desktop
-        - echo "Current directory after cd:"
+        - echo "Current directory after check:"
         - pwd
-        - echo "Listing desktop directory contents:"
-        - ls -la | head -20
+        - echo "Verifying we're in the right place:"
+        - ls -la | head -10
         - export VITE_SERVER_URL=https://summit-api.codingeverest.com
         - echo "VITE_SERVER_URL=$VITE_SERVER_URL"
         - echo "Running build command..."
