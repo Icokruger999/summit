@@ -44,7 +44,7 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
         WHERE mp2.meeting_id = m.id AND mp2.user_id = $1
       )
       GROUP BY m.id, m.title, m.description, m.start_time, m.end_time, 
-               m.room_id, m.created_by, m.recurrence, m.created_at, m.updated_at
+               m.room_id, m.created_by, m.created_at, m.updated_at
       ORDER BY m.start_time ASC
     `, [userId]);
 
