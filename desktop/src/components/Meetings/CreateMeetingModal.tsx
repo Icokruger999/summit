@@ -104,12 +104,28 @@ export default function CreateMeetingModal({
     }
   };
 
-  // Check if search query looks like an email
+  // Check if search query looks like an email (case-insensitive)
   const isEmailQuery = (query: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query.trim());
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(query.trim());
   };
 
-  // Search user by email when query looks like an email
+  // Filter contacts based on search query
+  const getFilteredContacts = () => {
+    const query = participantSearch.trim().toLowerCase();
+    if (!query) {
+      return contacts; // Show all contacts when search is empty
+    }
+    
+    // Filter contacts by name, email, or company (case-insensitive partial match)
+    return contacts.filter((contact: any) => {
+      const name = (contact.contact_name || "").toLowerCase();
+      const email = (contact.contact_email || "").toLowerCase();
+      const company = (contact.contact_company || "").toLowerCase();
+      return name.includes(query) || email.includes(query) || company.includes(query);
+    });
+  };
+
+  // Search user by email when query looks like an email (case-insensitive)
   useEffect(() => {
     const searchByEmail = async () => {
       const trimmedQuery = participantSearch.trim();
@@ -120,23 +136,33 @@ export default function CreateMeetingModal({
         return;
       }
 
+      // Normalize email to lowercase for API call (backend expects lowercase)
+      const normalizedEmail = trimmedQuery.toLowerCase();
+      console.log("🔍 Searching for email:", normalizedEmail);
+
       setSearchingParticipant(true);
       setSearchError(null);
       
       try {
         const { usersApi } = await import("../../lib/api");
-        const user = await usersApi.searchByEmail(trimmedQuery);
+        const user = await usersApi.searchByEmail(normalizedEmail);
+        console.log("✅ User found:", user);
         setSearchResult(user);
         // If user found and not already in availableUsers, add them
         if (!availableUsers.find(u => u.id === user.id)) {
           setAvailableUsers(prev => [...prev, user]);
         }
       } catch (error: any) {
+        console.error("❌ Search error:", error);
         const statusCode = error.response?.status;
+        const errorMessage = error.errorData?.error || error.message || error.error;
+        
         if (statusCode === 404) {
-          setSearchError("No user found with this email address");
+          setSearchError(errorMessage || "No user found with this email address");
+        } else if (statusCode === 400) {
+          setSearchError(errorMessage || "Invalid email address");
         } else {
-          setSearchError("Error searching for user. Please try again.");
+          setSearchError(errorMessage || "Error searching for user. Please try again.");
         }
         setSearchResult(null);
       } finally {
@@ -147,7 +173,7 @@ export default function CreateMeetingModal({
     // Debounce search
     const timeoutId = setTimeout(searchByEmail, 500);
     return () => clearTimeout(timeoutId);
-  }, [participantSearch]);
+  }, [participantSearch, availableUsers]);
 
   // Update start time when initialDate changes
   useEffect(() => {
@@ -299,81 +325,166 @@ export default function CreateMeetingModal({
                   value={participantSearch}
                   onChange={(e) => setParticipantSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Search by email (e.g., user@example.com) or name..."
+                  placeholder="Search contacts by name, email, or company..."
                 />
               </div>
-              <div className="border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto">
-                {isEmailQuery(participantSearch.trim()) ? (
-                  // Email search mode
-                  <div>
-                    {searchingParticipant ? (
+              <div className="border border-gray-200 rounded-xl p-3 max-h-64 overflow-y-auto">
+                {(() => {
+                  const filteredContacts = getFilteredContacts();
+                  const isEmail = isEmailQuery(participantSearch.trim());
+                  
+                  // Show loading state only when searching by email
+                  if (isEmail && searchingParticipant) {
+                    return (
                       <div className="p-4 text-center text-gray-500">
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                         <p className="text-xs">Searching...</p>
                       </div>
-                    ) : searchError ? (
+                    );
+                  }
+
+                  // Show error if email search failed
+                  if (isEmail && searchError) {
+                    return (
                       <div className="p-4 text-center">
                         <div className="text-red-500 mb-1">⚠️</div>
-                        <p className="text-xs text-gray-600">{searchError}</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">{searchError}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {searchError.includes("No user found") 
+                            ? "Make sure the email address is correct and the user is registered."
+                            : "Please check the email format and try again."}
+                        </p>
                       </div>
-                    ) : searchResult ? (
-                      // Show found user
-                      <div className={`p-3 rounded-lg border-2 ${
-                        contactStatus[searchResult.id] 
-                          ? "border-green-200 bg-green-50" 
-                          : "border-blue-200 bg-blue-50"
-                      }`}>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedParticipants.includes(searchResult.id)}
-                            onChange={() => toggleParticipant(searchResult.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {searchResult.name || searchResult.email}
+                    );
+                  }
+
+                  // Show contacts and/or email search result
+                  const showEmailResult = isEmail && searchResult;
+                  const showContacts = !isEmail || filteredContacts.length > 0 || showEmailResult;
+
+                  if (!showContacts && !showEmailResult) {
+                    return (
+                      <div className="p-8 text-center text-gray-500">
+                        <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-sm font-medium">No contacts found</p>
+                        <p className="text-xs mt-2">Try a different search term or enter an email address</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {/* Show filtered contacts */}
+                      {filteredContacts.map((contact: any) => {
+                        // Don't show contact if it's the same as the email search result
+                        if (showEmailResult && contact.contact_id === searchResult.id) {
+                          return null;
+                        }
+                        
+                        return (
+                          <label
+                            key={contact.contact_id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              selectedParticipants.includes(contact.contact_id)
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 bg-white hover:bg-gray-50"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedParticipants.includes(contact.contact_id)}
+                              onChange={() => toggleParticipant(contact.contact_id)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              {contact.contact_avatar_url ? (
+                                <img
+                                  src={contact.contact_avatar_url}
+                                  alt={contact.contact_name || contact.contact_email}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className="w-5 h-5 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {contact.contact_name || contact.contact_email}
+                              </p>
+                              {contact.contact_name && (
+                                <p className="text-xs text-gray-500 truncate">
+                                  {contact.contact_email}
+                                </p>
+                              )}
+                              {contact.contact_company && (
+                                <p className="text-xs text-gray-400 mt-1 truncate">
+                                  {contact.contact_company}
+                                </p>
+                              )}
+                            </div>
+                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          </label>
+                        );
+                      })}
+
+                      {/* Show email search result if found and not already in contacts */}
+                      {showEmailResult && (
+                        <div className={`p-3 rounded-lg border-2 ${
+                          contactStatus[searchResult.id] 
+                            ? "border-green-200 bg-green-50" 
+                            : "border-blue-200 bg-blue-50"
+                        }`}>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedParticipants.includes(searchResult.id)}
+                              onChange={() => toggleParticipant(searchResult.id)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-sky-600 rounded-full flex items-center justify-center flex-shrink-0">
+                              {searchResult.avatar_url ? (
+                                <img
+                                  src={searchResult.avatar_url}
+                                  alt={searchResult.name || searchResult.email}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className="w-5 h-5 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {searchResult.name || searchResult.email}
+                              </p>
+                              {searchResult.name && (
+                                <p className="text-xs text-gray-500 truncate">{searchResult.email}</p>
+                              )}
+                              {searchResult.company && (
+                                <p className="text-xs text-gray-400 mt-1 truncate">{searchResult.company}</p>
+                              )}
+                            </div>
+                            {contactStatus[searchResult.id] ? (
+                              <span className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-lg flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Contact
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg flex items-center gap-1">
+                                <UserPlus className="w-3 h-3" />
+                                Will send chat request
+                              </span>
+                            )}
+                          </label>
+                          {!contactStatus[searchResult.id] && (
+                            <p className="text-xs text-blue-600 mt-2 ml-7">
+                              A chat request will be sent along with the meeting invitation
                             </p>
-                            {searchResult.name && (
-                              <p className="text-xs text-gray-500">{searchResult.email}</p>
-                            )}
-                            {searchResult.company && (
-                              <p className="text-xs text-gray-400 mt-1">{searchResult.company}</p>
-                            )}
-                          </div>
-                          {contactStatus[searchResult.id] ? (
-                            <span className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-lg flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" />
-                              Contact
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-lg flex items-center gap-1">
-                              <UserPlus className="w-3 h-3" />
-                              Will send chat request
-                            </span>
                           )}
-                        </label>
-                        {!contactStatus[searchResult.id] && (
-                          <p className="text-xs text-blue-600 mt-2 ml-7">
-                            A chat request will be sent along with the meeting invitation
-                          </p>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : availableUsers.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-2">
-                    No users available
-                  </p>
-                ) : (
-                  <div className="p-4 text-center">
-                    <p className="text-xs text-gray-400">
-                      {!participantSearch.trim() 
-                        ? "Enter a complete email address to search (e.g., user@example.com)"
-                        : "Enter a complete email address to search. Partial matches are not shown."}
-                    </p>
-                  </div>
-                )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               {selectedParticipants.length > 0 && (
                 <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
