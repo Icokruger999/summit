@@ -45,81 +45,75 @@ export function getPool(): Pool {
   return pool;
 }
 
-// Helper function to get user by email (optimized with indexed lookup)
-// Note: Uses Summit database (SUMMIT_DB_HOST) for authentication
-// This assumes email column has a unique index. If using case-insensitive, 
-// consider creating a functional index: CREATE UNIQUE INDEX users_email_lower_idx ON users (LOWER(email));
+// DEPRECATED: These functions are deprecated. Use Supabase client instead (see server/src/lib/supabase.ts)
+// Helper function to get user by email
+// NOTE: This is DEPRECATED - use getUserByEmail from supabase.ts instead
 export async function getUserByEmail(email: string) {
-  const normalizedEmail = email.toLowerCase().trim();
-  // Optimized: Use indexed column directly if email is stored lowercase, or use functional index
-  // Select only needed columns instead of SELECT *
-  const result = await summitQuery(
-    'SELECT id, email, password_hash, name, avatar_url, company, job_title, phone, created_at, updated_at FROM users WHERE LOWER(email) = $1',
-    [normalizedEmail]
+  throw new Error(
+    'getUserByEmail from db.ts is deprecated. ' +
+    'Please use getUserByEmail from supabase.ts instead. ' +
+    'Import: import { getUserByEmail } from "../lib/supabase.js"'
   );
-  return result.rows[0] || null;
 }
 
-// Helper function to get user by ID (optimized - select only needed columns)
-// Note: Uses Summit database (SUMMIT_DB_HOST) for authentication
+// DEPRECATED: Use getUserById from supabase.ts instead
 export async function getUserById(id: string) {
-  const result = await summitQuery(
-    'SELECT id, email, password_hash, name, avatar_url, company, job_title, phone, created_at, updated_at FROM users WHERE id = $1',
-    [id]
+  throw new Error(
+    'getUserById from db.ts is deprecated. ' +
+    'Please use getUserById from supabase.ts instead. ' +
+    'Import: import { getUserById } from "../lib/supabase.js"'
   );
-  return result.rows[0] || null;
 }
 
-// Helper function to create user
-// Note: Uses Summit database (SUMMIT_DB_HOST) for authentication
+// DEPRECATED: Use createUser from supabase.ts instead
 export async function createUser(email: string, passwordHash: string, name?: string) {
-  const normalizedEmail = email.toLowerCase().trim();
-  const result = await summitQuery(
-    'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name, avatar_url, created_at',
-    [normalizedEmail, passwordHash, name || null]
+  throw new Error(
+    'createUser from db.ts is deprecated. ' +
+    'Please use createUser from supabase.ts instead. ' +
+    'Import: import { createUser } from "../lib/supabase.js"'
   );
-  return result.rows[0];
 }
 
 // ============================================
 // Summit Database Connection (Separate Endpoint)
 // ============================================
-// Summit uses its own database endpoint configuration
-// This allows Summit to have a separate RDS instance/database
-// REQUIRED: Set SUMMIT_DB_HOST environment variable with the new Summit database endpoint
+// NOTE: This is now OPTIONAL - we're using Supabase for auth
+// This is kept for backward compatibility with routes that still use db.js
+// TODO: Migrate all routes to use Supabase client
 
-if (!process.env.SUMMIT_DB_HOST) {
-  throw new Error(
-    'SUMMIT_DB_HOST environment variable is required. ' +
-    'Please set SUMMIT_DB_HOST to your new Summit database endpoint. ' +
-    'Example: SUMMIT_DB_HOST=your-new-summit-endpoint.rds.amazonaws.com'
-  );
-}
+let summitPool: Pool | null = null;
 
-const summitDbConfig = {
-  host: process.env.SUMMIT_DB_HOST,
-  port: parseInt(process.env.SUMMIT_DB_PORT || '5432'),
-  database: process.env.SUMMIT_DB_NAME || 'Summit',
-  user: process.env.SUMMIT_DB_USER || 'postgres',
-  password: process.env.SUMMIT_DB_PASSWORD || 'Stacey1122',
-  ssl: {
-    rejectUnauthorized: false
-  },
-  // Connection pool configuration for better performance
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection cannot be established
-};
-
-// Separate connection pool for Summit
-const summitPool = new Pool(summitDbConfig);
-
-summitPool.on('error', (err) => {
-  console.error('Unexpected error on Summit database idle client', err);
-});
-
-// Summit-specific query function
+// Summit-specific query function (only if SUMMIT_DB_HOST is set)
 export async function summitQuery(text: string, params?: any[]) {
+  if (!process.env.SUMMIT_DB_HOST) {
+    throw new Error(
+      'SUMMIT_DB_HOST is not set. This function is deprecated. ' +
+      'Please migrate to Supabase client (see server/src/lib/supabase.ts)'
+    );
+  }
+
+  // Lazy initialization of pool
+  if (!summitPool) {
+    const summitDbConfig = {
+      host: process.env.SUMMIT_DB_HOST,
+      port: parseInt(process.env.SUMMIT_DB_PORT || '5432'),
+      database: process.env.SUMMIT_DB_NAME || 'Summit',
+      user: process.env.SUMMIT_DB_USER || 'postgres',
+      password: process.env.SUMMIT_DB_PASSWORD || 'Stacey1122',
+      ssl: {
+        rejectUnauthorized: false
+      },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+
+    summitPool = new Pool(summitDbConfig);
+    summitPool.on('error', (err) => {
+      console.error('Unexpected error on Summit database idle client', err);
+    });
+  }
+
   const start = Date.now();
   try {
     const result = await summitPool.query(text, params);
@@ -135,6 +129,6 @@ export async function summitQuery(text: string, params?: any[]) {
 }
 
 // Get Summit pool for advanced usage if needed
-export function getSummitPool(): Pool {
+export function getSummitPool(): Pool | null {
   return summitPool;
 }
