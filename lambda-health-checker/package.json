@@ -1,0 +1,21 @@
+{
+  "name": "summit-health-checker",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to monitor Summit site health",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "zip -r function.zip . -x '*.git*' '*.md' 'package*.json'"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1400.0"
+  },
+  "keywords": [
+    "lambda",
+    "health-check",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+
