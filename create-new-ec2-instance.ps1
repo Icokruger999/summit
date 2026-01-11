@@ -79,7 +79,7 @@ try {
     if ($sgId -and $sgId -ne "None") {
         Write-Host "✅ Security group '$SecurityGroupName' already exists: $sgId" -ForegroundColor Green
     } else {
-        Write-Host "⚠️  Security group '$SecurityGroupName' not found" -ForegroundColor Yellow
+        Write-Host "Security group '$SecurityGroupName' not found" -ForegroundColor Yellow
         Write-Host "   Creating new security group..." -ForegroundColor Yellow
         $sgId = aws ec2 create-security-group --group-name $SecurityGroupName --description "Security group for Summit application" --vpc-id $vpc --query "GroupId" --output text
         
