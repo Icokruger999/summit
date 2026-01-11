@@ -27,10 +27,14 @@ frontend:
         - |
           # Set production API URL - CRITICAL for WebSocket and API calls
           # This MUST be set before npm run build so Vite compiles it into the bundle
-          export VITE_SERVER_URL=https://summit-api.codingeverest.com
+          export VITE_SERVER_URL=https://summit.api.codingeverest.com
           echo "✅ VITE_SERVER_URL set to: $VITE_SERVER_URL"
-          echo "⚠️  Building with production API endpoint"
-          echo "📝 Note: .env.production provides fallback if this fails"
+          echo "✅ Building with production API endpoint (port 3000)"
+          echo "📝 Backend must be running on port 3000 (NEVER 5000 or 50001)"
+          echo "🔍 Verifying VITE_SERVER_URL is set: $VITE_SERVER_URL"
+          # Force cache bust - add timestamp to ensure fresh build
+          export BUILD_TIMESTAMP=$(date +%s)
+          echo "🕐 Build timestamp: $BUILD_TIMESTAMP"
         - |
           # Verify environment variable is set before build
           if [ -z "$VITE_SERVER_URL" ]; then
