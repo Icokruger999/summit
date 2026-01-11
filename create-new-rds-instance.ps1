@@ -183,7 +183,7 @@ try {
     Write-Host ""
     
     # Wait for instance to be available (optional - commented out as it takes long)
-    Write-Host "💡 To wait for instance to be ready, run:" -ForegroundColor Yellow
+    Write-Host "To wait for instance to be ready, run:" -ForegroundColor Yellow
     Write-Host "   aws rds wait db-instance-available --db-instance-identifier $DBInstanceIdentifier" -ForegroundColor Cyan
     
 } catch {
