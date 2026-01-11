@@ -1,0 +1,19 @@
+{
+  "Comment": "Create A record for summit.api.codingeverest.com",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "summit.api.codingeverest.com",
+        "Type": "A",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "52.48.245.252"
+          }
+        ]
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,7 @@
+﻿{
+  "InstanceIds": ["i-0fba58db502cc8d39"],
+  "DocumentName": "AWS-RunShellScript",
+  "Parameters": {
+    "commands": ["test -f /tmp/summit-backup.tar.gz && echo 'File found' || echo 'File not found'", "cd /var/www && sudo rm -rf summit && sudo tar -xzf /tmp/summit-backup.tar.gz && sudo chown -R ubuntu:ubuntu /var/www/summit && ls -la /var/www/summit | head -10"]
+  }
+}

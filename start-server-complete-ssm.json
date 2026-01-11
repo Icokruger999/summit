@@ -1,0 +1,31 @@
+{
+  "commands": [
+    "cd /var/www/summit/server",
+    "echo '=== Current Environment ==='",
+    "cat .env | head -5",
+    "echo ''",
+    "echo '=== Stopping any existing process ==='",
+    "pm2 stop summit 2>/dev/null || true",
+    "pm2 delete summit 2>/dev/null || true",
+    "echo ''",
+    "echo '=== Starting server with PM2 ==='",
+    "PORT=3000 pm2 start dist/index.js --name summit --update-env",
+    "sleep 5",
+    "echo ''",
+    "echo '=== PM2 Status ==='",
+    "pm2 list",
+    "echo ''",
+    "echo '=== PM2 Info ==='",
+    "pm2 info summit || echo 'Process not found'",
+    "echo ''",
+    "echo '=== Testing Health Endpoint ==='",
+    "sleep 2",
+    "curl -s http://localhost:3000/health || echo 'Health check failed'",
+    "echo ''",
+    "echo '=== Port Status ==='",
+    "netstat -tlnp 2>/dev/null | grep :3000 || ss -tlnp 2>/dev/null | grep :3000 || echo 'Port 3000 not listening'",
+    "echo ''",
+    "pm2 save"
+  ]
+}
+

@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "cd /var/www/summit/server",
+    "pm2 stop summit 2>/dev/null || true",
+    "pm2 delete summit 2>/dev/null || true",
+    "pm2 start dist/index.js --name summit --update-env",
+    "pm2 save",
+    "sleep 3",
+    "pm2 list",
+    "curl -s http://localhost:3000/health || echo 'Health check failed'",
+    "netstat -tlnp 2>/dev/null | grep :3000 || ss -tlnp 2>/dev/null | grep :3000 || echo 'Port 3000 check'"
+  ]
+}
+

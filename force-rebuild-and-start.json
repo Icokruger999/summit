@@ -1,0 +1,41 @@
+{
+  "InstanceIds": ["i-0fba58db502cc8d39"],
+  "DocumentName": "AWS-RunShellScript",
+  "Parameters": {
+    "commands": [
+      "cd /var/www/summit/server",
+      "echo '=== Removing old build ==='",
+      "rm -rf dist",
+      "echo '=== Ensuring .env exists ==='",
+      "cat > .env << 'ENVEOF'",
+      "PORT=3000",
+      "JWT_SECRET=summit-jwt-secret",
+      "SUPABASE_URL=https://rzxhbqwzpucqwxngkxbr.supabase.co",
+      "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6eGhicXd6cHVjcXd4bmdreGJyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODEzMjA0MCwiZXhwIjoyMDgzNzA4MDQwfQ.OCR0dpSg1h4cfxZCZFMXFm_5fhr5i6N_DzEhOQccJHo",
+      "CORS_ORIGIN=https://www.codingeverest.com,https://codingeverest.com,https://summit.codingeverest.com",
+      "LIVEKIT_API_KEY=your_livekit_api_key",
+      "LIVEKIT_API_SECRET=your_livekit_api_secret",
+      "LIVEKIT_URL=wss://your-livekit-url",
+      "ENVEOF",
+      "echo '=== Pulling code ==='",
+      "git pull origin main",
+      "echo '=== Installing dependencies ==='",
+      "npm install",
+      "echo '=== Building ==='",
+      "npm run build",
+      "echo '=== Testing build ==='",
+      "node dist/index.js 2>&1 | head -20 &",
+      "sleep 3",
+      "pkill -f 'node.*dist/index.js' || true",
+      "echo '=== Starting with PM2 ==='",
+      "pm2 delete summit-backend 2>/dev/null || true",
+      "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
+      "sleep 2",
+      "pm2 start dist/index.js --name summit-backend --update-env",
+      "sleep 5",
+      "pm2 list",
+      "curl -s http://localhost:3000/health || echo 'FAILED'"
+    ]
+  }
+}
+

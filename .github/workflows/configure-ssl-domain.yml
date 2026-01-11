@@ -1,0 +1,121 @@
+name: Configure SSL Domain
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - check-status
+          - request-certificate
+          - validate-dns
+
+jobs:
+  configure-ssl:
+    runs-on: ubuntu-latest
+    name: Configure Summit SSL Domain
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Check domain status
+        if: github.event.inputs.action == 'check-status'
+        run: |
+          APP_ID="d1mhd5fnnjyucj"
+          DOMAIN="summit.codingeverest.com"
+          
+          echo "=== Domain Configuration Status ==="
+          
+          # Check Amplify domain
+          DOMAIN_INFO=$(aws amplify list-domain-associations \
+            --app-id $APP_ID \
+            --region eu-west-1 \
+            --output json)
+          
+          echo "$DOMAIN_INFO" | jq '.domainAssociations[] | {domainName, domainStatus, certificateVerificationDNSRecord}'
+          
+          # Check Route 53 DNS
+          ZONE_ID="Z024513220PNY1F3PO6K5"
+          DNS_RECORDS=$(aws route53 list-resource-record-sets \
+            --hosted-zone-id $ZONE_ID \
+            --query "ResourceRecordSets[?Name=='$DOMAIN.']" \
+            --output json)
+          
+          echo ""
+          echo "=== DNS Records ==="
+          echo "$DNS_RECORDS" | jq '.'
+          
+          # Check ACM certificates
+          echo ""
+          echo "=== SSL Certificates ==="
+          CERTS=$(aws acm list-certificates --region eu-west-1 --output json)
+          echo "$CERTS" | jq ".CertificateSummaryList[] | select(.DomainName | contains(\"$DOMAIN\"))"
+
+      - name: Request certificate (if needed)
+        if: github.event.inputs.action == 'request-certificate'
+        run: |
+          DOMAIN="summit.codingeverest.com"
+          
+          echo "Note: SSL certificates for Amplify are automatically managed."
+          echo "To configure the domain, use the AWS Amplify Console:"
+          echo "https://console.aws.amazon.com/amplify/home?region=eu-west-1#/d1mhd5fnnjyucj"
+          echo ""
+          echo "Or use the AWS CLI to check domain status:"
+          echo "aws amplify list-domain-associations --app-id d1mhd5fnnjyucj --region eu-west-1"
+
+      - name: Validate DNS records
+        if: github.event.inputs.action == 'validate-dns'
+        run: |
+          DOMAIN="summit.codingeverest.com"
+          ZONE_ID="Z024513220PNY1F3PO6K5"
+          
+          echo "=== Validating DNS Records ==="
+          
+          # Get domain info from Amplify
+          DOMAIN_INFO=$(aws amplify list-domain-associations \
+            --app-id d1mhd5fnnjyucj \
+            --region eu-west-1 \
+            --output json)
+          
+          VALIDATION_RECORD=$(echo "$DOMAIN_INFO" | jq -r '.domainAssociations[0].certificateVerificationDNSRecord // empty')
+          
+          if [ -n "$VALIDATION_RECORD" ]; then
+            echo "Certificate validation record required:"
+            echo "$VALIDATION_RECORD"
+            echo ""
+            echo "Checking if this record exists in Route 53..."
+            
+            # Check if validation record exists
+            DNS_RECORDS=$(aws route53 list-resource-record-sets \
+              --hosted-zone-id $ZONE_ID \
+              --output json)
+            
+            # Extract validation record name from the string
+            VALIDATION_NAME=$(echo "$VALIDATION_RECORD" | awk '{print $1}')
+            
+            EXISTS=$(echo "$DNS_RECORDS" | jq ".ResourceRecordSets[] | select(.Name == \"$VALIDATION_NAME\")")
+            
+            if [ -n "$EXISTS" ]; then
+              echo "✅ Validation record exists in Route 53"
+              echo "$EXISTS" | jq '.'
+            else
+              echo "❌ Validation record NOT found in Route 53"
+              echo "Please add this record to Route 53:"
+              echo "  Name: $VALIDATION_NAME"
+              echo "  Type: CNAME"
+              echo "  Value: (from Amplify Console)"
+            fi
+          else
+            echo "No validation record needed or domain is already configured"
+          fi
+

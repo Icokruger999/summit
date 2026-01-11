@@ -1,0 +1,24 @@
+{
+  "commands": [
+    "export HOME=/root",
+    "cd /var/www/summit/server",
+    "echo '=== PM2 Process List ==='",
+    "pm2 list",
+    "echo ''",
+    "echo '=== PM2 Logs (Error) ==='",
+    "pm2 logs summit --err --lines 30 --nostream 2>&1 || echo 'No error logs'",
+    "echo ''",
+    "echo '=== PM2 Logs (Out) ==='",
+    "pm2 logs summit --out --lines 30 --nostream 2>&1 || echo 'No output logs'",
+    "echo ''",
+    "echo '=== Check if dist/index.js exists ==='",
+    "ls -la dist/index.js 2>&1 || echo 'dist/index.js NOT FOUND'",
+    "echo ''",
+    "echo '=== Check .env file ==='",
+    "cat .env 2>&1 | head -10",
+    "echo ''",
+    "echo '=== Try starting server manually to see errors ==='",
+    "cd /var/www/summit/server && timeout 5 node dist/index.js 2>&1 || echo 'Server start test completed'"
+  ]
+}
+

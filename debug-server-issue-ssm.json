@@ -1,0 +1,27 @@
+{
+  "commands": [
+    "export HOME=/root",
+    "cd /var/www/summit/server",
+    "echo '=== Step 1: Check if dist/index.js exists ==='",
+    "ls -la dist/index.js 2>&1 || echo 'ERROR: dist/index.js NOT FOUND'",
+    "echo ''",
+    "echo '=== Step 2: Check .env file ==='",
+    "cat .env 2>&1 | head -10",
+    "echo ''",
+    "echo '=== Step 3: PM2 Status ==='",
+    "pm2 list",
+    "echo ''",
+    "echo '=== Step 4: PM2 Logs (Errors) ==='",
+    "pm2 logs summit --err --lines 50 --nostream 2>&1 || echo 'No error logs'",
+    "echo ''",
+    "echo '=== Step 5: PM2 Logs (Output) ==='",
+    "pm2 logs summit --out --lines 30 --nostream 2>&1 || echo 'No output logs'",
+    "echo ''",
+    "echo '=== Step 6: Try to start server manually to see errors ==='",
+    "cd /var/www/summit/server && timeout 10 node dist/index.js 2>&1 || echo 'Manual start test completed'",
+    "echo ''",
+    "echo '=== Step 7: Check port 3000 ==='",
+    "ss -tlnp | grep :3000 || netstat -tlnp | grep :3000 || echo 'Port 3000 NOT listening'"
+  ]
+}
+

@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "cd /var/www/summit/server",
+    "cat > .env << 'ENVEOF'\nPORT=4000\nJWT_SECRET=summit-jwt-secret-change-in-production\n\nDB_HOST=codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com\nDB_PORT=5432\nDB_NAME=Summit\nDB_USER=postgres\nDB_PASSWORD=Stacey1122\n\nSUMMIT_DB_HOST=summit-db.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com\nSUMMIT_DB_PORT=5432\nSUMMIT_DB_NAME=Summit\nSUMMIT_DB_USER=postgres\nSUMMIT_DB_PASSWORD=Stacey1122\n\nSUMMIT_API_KEY=summit-api-key-change-in-production\n\nCORS_ORIGIN=http://localhost:5173,https://www.codingeverest.com,https://codingeverest.com,https://summit.codingeverest.com\n\nLIVEKIT_API_KEY=devkey\nLIVEKIT_API_SECRET=devsecret\nLIVEKIT_URL=ws://localhost:7880\nENVEOF",
+    "echo '✅ .env file created'",
+    "cat .env | head -5"
+  ]
+}
+

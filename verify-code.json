@@ -1,0 +1,7 @@
+﻿{
+  "InstanceIds": ["i-0fba58db502cc8d39"],
+  "DocumentName": "AWS-RunShellScript",
+  "Parameters": {
+    "commands": ["test -d /var/www/summit && echo 'SUCCESS: Code extracted' && ls -la /var/www/summit/server | head -3 && ls -la /var/www/summit/database | head -3 || echo 'FAILED: Code not found'"]
+  }
+}

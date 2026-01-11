@@ -1,0 +1,7 @@
+{
+  "commands": [
+    "cd /var/www && tar -czf /tmp/summit-backup.tar.gz summit && ls -lh /tmp/summit-backup.tar.gz",
+    "aws s3 cp /tmp/summit-backup.tar.gz s3://summit-migration-bucket-temp/summit-backup.tar.gz"
+  ]
+}
+

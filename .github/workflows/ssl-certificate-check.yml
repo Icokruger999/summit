@@ -1,0 +1,111 @@
+name: Check SSL Certificate Status
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ssl-certificate-check.yml'
+
+jobs:
+  check-ssl:
+    runs-on: ubuntu-latest
+    name: Check Summit SSL Certificate
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Check Amplify domain status
+        id: check-domain
+        run: |
+          APP_ID="d1mhd5fnnjyucj"
+          DOMAIN="summit.codingeverest.com"
+          
+          echo "Checking domain configuration for $DOMAIN..."
+          
+          DOMAIN_INFO=$(aws amplify list-domain-associations \
+            --app-id $APP_ID \
+            --region eu-west-1 \
+            --output json)
+          
+          echo "Domain info:"
+          echo "$DOMAIN_INFO" | jq '.'
+          
+          DOMAIN_STATUS=$(echo "$DOMAIN_INFO" | jq -r '.domainAssociations[0].domainStatus // "NOT_FOUND"')
+          CERT_VERIFICATION=$(echo "$DOMAIN_INFO" | jq -r '.domainAssociations[0].certificateVerificationDNSRecord // "N/A"')
+          
+          echo "domain_status=$DOMAIN_STATUS" >> $GITHUB_OUTPUT
+          echo "cert_verification=$CERT_VERIFICATION" >> $GITHUB_OUTPUT
+          
+          if [ "$DOMAIN_STATUS" = "AVAILABLE" ]; then
+            echo "✅ SSL certificate is available and domain is configured correctly"
+          elif [ "$DOMAIN_STATUS" = "PENDING_VERIFICATION" ]; then
+            echo "⏳ SSL certificate is pending verification"
+          elif [ "$DOMAIN_STATUS" = "PENDING_DEPLOYMENT" ]; then
+            echo "⏳ SSL certificate is pending deployment"
+          elif [ "$DOMAIN_STATUS" = "FAILED" ]; then
+            echo "❌ SSL certificate validation failed"
+            exit 1
+          else
+            echo "⚠️  Domain status: $DOMAIN_STATUS"
+          fi
+
+      - name: Check certificate in ACM
+        run: |
+          DOMAIN="summit.codingeverest.com"
+          
+          echo "Checking AWS Certificate Manager for certificates..."
+          
+          CERTS=$(aws acm list-certificates \
+            --region eu-west-1 \
+            --output json)
+          
+          echo "$CERTS" | jq '.'
+          
+          SUMMIT_CERT=$(echo "$CERTS" | jq ".CertificateSummaryList[] | select(.DomainName == \"$DOMAIN\" or .DomainName == \"*.$DOMAIN\")")
+          
+          if [ -n "$SUMMIT_CERT" ]; then
+            CERT_STATUS=$(echo "$SUMMIT_CERT" | jq -r '.Status')
+            CERT_DOMAIN=$(echo "$SUMMIT_CERT" | jq -r '.DomainName')
+            echo "Found certificate for $CERT_DOMAIN: Status = $CERT_STATUS"
+          else
+            echo "⚠️  No certificate found for $DOMAIN in ACM"
+          fi
+
+      - name: Test HTTPS connection
+        run: |
+          DOMAIN="summit.codingeverest.com"
+          
+          echo "Testing HTTPS connection to $DOMAIN..."
+          
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://$DOMAIN || echo "000")
+          
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ HTTPS connection successful (HTTP $HTTP_CODE)"
+          else
+            echo "❌ HTTPS connection failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Create status summary
+        if: always()
+        run: |
+          echo "## SSL Certificate Status Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Domain:** summit.codingeverest.com" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.check-domain.outputs.domain_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+

@@ -1,8 +1,14 @@
+// Legacy database connection module
+// NOTE: This module is kept for backward compatibility with routes that haven't migrated to Supabase yet
+// Most routes should use Supabase client (see server/src/lib/supabase.ts)
+
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Legacy database connection (deprecated - use Supabase instead)
+// Only used by routes that haven't been migrated yet
 const dbConfig = {
   host: process.env.DB_HOST || 'codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com',
   port: parseInt(process.env.DB_PORT || '5432'),
@@ -12,20 +18,20 @@ const dbConfig = {
   ssl: {
     rejectUnauthorized: false
   },
-  // Connection pool configuration for better performance
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection cannot be established
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 };
 
-// Use connection pool instead of single client for better performance
 const pool = new Pool(dbConfig);
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
+// Legacy query function - DEPRECATED: Migrate to Supabase
 export async function query(text: string, params?: any[]) {
+  console.warn('⚠️  Using legacy query() function. Please migrate to Supabase client.');
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
@@ -40,7 +46,6 @@ export async function query(text: string, params?: any[]) {
   }
 }
 
-// Get pool for advanced usage if needed
 export function getPool(): Pool {
   return pool;
 }

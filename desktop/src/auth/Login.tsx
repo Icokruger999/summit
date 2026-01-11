@@ -55,7 +55,7 @@ export default function Login() {
       
       // Check for network errors
       if (err.isNetworkError || statusCode === 0) {
-        setError("Cannot connect to server. Please make sure the backend server is running on port 3000.");
+        setError("Cannot connect to server. Please check your internet connection and try again.");
         setLoading(false);
         return;
       }

@@ -1,0 +1,21 @@
+{
+  "InstanceIds": ["i-0fba58db502cc8d39"],
+  "DocumentName": "AWS-RunShellScript",
+  "Parameters": {
+    "commands": [
+      "cd /var/www/summit/server",
+      "echo '=== PM2 Status ==='",
+      "pm2 list",
+      "echo ''",
+      "echo '=== PM2 Error Logs (last 30 lines) ==='",
+      "pm2 logs summit-backend --err --lines 30 --nostream 2>&1 | tail -30",
+      "echo ''",
+      "echo '=== PM2 Output Logs (last 30 lines) ==='",
+      "pm2 logs summit-backend --out --lines 30 --nostream 2>&1 | tail -30",
+      "echo ''",
+      "echo '=== Trying to start manually to see error ==='",
+      "cd /var/www/summit/server && timeout 5 node dist/index.js 2>&1 || echo 'Process exited'"
+    ]
+  }
+}
+

@@ -1,8 +1,0 @@
-{
-  "commands": [
-    "sudo certbot certonly --nginx -d summit-api.codingeverest.com --non-interactive --agree-tos --email admin@codingeverest.com --redirect 2>&1",
-    "ls -la /etc/letsencrypt/live/summit-api.codingeverest.com/ 2>/dev/null || echo 'Certificate directory not found yet'",
-    "echo 'Certificate request completed'"
-  ]
-}
-

@@ -1,0 +1,35 @@
+{
+  "commands": [
+    "echo '=== Complete Server Status Check ==='",
+    "echo ''",
+    "echo '1. PM2 Status:'",
+    "export HOME=/root",
+    "pm2 list",
+    "echo ''",
+    "echo '2. Server Process Details:'",
+    "pm2 describe summit 2>&1 | head -20",
+    "echo ''",
+    "echo '3. Check if port 3000 is listening:'",
+    "ss -tlnp | grep :3000 || netstat -tlnp | grep :3000 || echo 'Port 3000 NOT listening'",
+    "echo ''",
+    "echo '4. Test health endpoint:'",
+    "curl -s http://localhost:3000/health 2>&1",
+    "echo ''",
+    "echo '5. Check nginx status:'",
+    "systemctl status nginx --no-pager | head -10",
+    "echo ''",
+    "echo '6. Check if nginx is listening on 80 and 443:'",
+    "ss -tlnp | grep -E ':(80|443)' || netstat -tlnp | grep -E ':(80|443)'",
+    "echo ''",
+    "echo '7. Check server logs for errors (last 20 lines):'",
+    "pm2 logs summit --err --lines 20 --nostream 2>&1 | tail -20 || echo 'No errors in logs'",
+    "echo ''",
+    "echo '8. Check system resources:'",
+    "free -h | head -2",
+    "df -h / | tail -1",
+    "echo ''",
+    "echo '9. Check if PM2 startup is configured:'",
+    "pm2 startup 2>&1 | tail -1"
+  ]
+}
+

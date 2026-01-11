@@ -1,71 +1,72 @@
-# How to Start the Backend Server
+# Production Server Deployment
 
-## Quick Start
+## ⚠️ This is a Production Server
 
-Open a **new terminal window** and run:
+This server is configured for **production deployment only**. It runs 24/7 with PM2 process manager.
 
-```bash
-cd C:\CodingE-Chat\server
-npm run dev
-```
+## Quick Start (Production)
 
-You should see:
-```
-Server running on port 3000
-```
-
-## Verify It's Running
-
-In another terminal, test the health endpoint:
-```bash
-curl http://localhost:3000/health
-```
-
-Or open in browser: http://localhost:3000/health
-
-You should see: `{"status":"ok"}`
-
-## Troubleshooting
-
-### Port 3000 already in use
-```bash
-# Find what's using port 3000
-netstat -ano | findstr :3000
-
-# Kill the process (replace PID with actual process ID)
-taskkill /PID <PID> /F
-```
-
-### Dependencies not installed
+### Linux/Unix:
 ```bash
 cd server
-npm install
+./start-production.sh
 ```
 
-### Database connection errors
-Make sure your PostgreSQL database is accessible and credentials are correct in `.env` file.
+### Windows:
+```powershell
+cd server
+.\start-production.ps1
+```
+
+## Requirements
+
+1. **PM2 installed**: `npm install -g pm2`
+2. **Environment variables configured** in `server/.env`
+3. **All required variables set** (see `server/.env.example`)
+
+## Key Rules
+
+- ✅ Server runs 24/7 with auto-restart
+- ✅ Never uses ports 5000 or 50001
+- ✅ No localhost in production configuration
+- ✅ Environment variables must be set before deployment
 
 ## Environment Variables
 
-Create `server/.env` file (or copy from `.env.example`):
-```env
-PORT=3000
-DB_HOST=codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com
-DB_PORT=5432
-DB_NAME=Summit
-DB_USER=postgres
-DB_PASSWORD=your_database_password
-JWT_SECRET=your-secret-key-change-in-production
+Copy `server/.env.example` to `server/.env` and configure:
 
-# LiveKit Configuration (for local development)
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=devsecret
-LIVEKIT_URL=ws://localhost:7880
+**Required:**
+- `PORT` - Server port (default: 3000, NEVER 5000 or 50001)
+- `NODE_ENV=production`
+- `CORS_ORIGIN` - Production domains only (NO localhost)
+- `JWT_SECRET` - Strong random secret
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+- `SUMMIT_DB_HOST`, `SUMMIT_DB_PORT`, `SUMMIT_DB_NAME`, `SUMMIT_DB_USER`, `SUMMIT_DB_PASSWORD`
+- `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`
+
+## Verify Deployment
+
+```bash
+# Check PM2 status
+pm2 status
+
+# View logs
+pm2 logs summit-backend
+
+# Test health endpoint
+curl http://your-server:3000/health
 ```
 
-**Note:** The LiveKit credentials above are for local development. The backend will automatically use `devkey`/`devsecret` if not set, which matches LiveKit's `--dev` mode.
+## Management Commands
 
-## Keep It Running
+```bash
+pm2 status                 # Check status
+pm2 logs summit-backend   # View logs
+pm2 restart summit-backend # Restart
+pm2 stop summit-backend   # Stop
+```
 
-The server must stay running while you use the desktop app. Keep the terminal window open.
+## Full Documentation
+
+See `server/PRODUCTION_DEPLOYMENT.md` for complete deployment guide.
 

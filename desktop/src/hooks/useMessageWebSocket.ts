@@ -69,7 +69,7 @@ export function useMessageWebSocket({
       // Use production API URL - MUST be set in environment (Amplify)
       // Use production URL as fallback for web builds (not localhost)
       const apiUrl = import.meta.env.VITE_SERVER_URL || 
-        (import.meta.env.MODE === "production" ? "https://summit-api.codingeverest.com" : undefined);
+        (import.meta.env.MODE === "production" ? "https://summit.api.codingeverest.com" : undefined);
       if (!apiUrl) {
         console.error("❌ VITE_SERVER_URL is not set! WebSocket cannot connect.");
         throw new Error("VITE_SERVER_URL environment variable is required");

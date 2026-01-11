@@ -1,0 +1,27 @@
+{
+  "commands": [
+    "cd /var/www/summit/server",
+    "echo 'PORT=3000' > .env",
+    "echo 'SUMMIT_DB_HOST=summit-db.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com' >> .env",
+    "echo 'SUMMIT_DB_PORT=5432' >> .env",
+    "echo 'SUMMIT_DB_NAME=Summit' >> .env",
+    "echo 'SUMMIT_DB_USER=postgres' >> .env",
+    "echo 'SUMMIT_DB_PASSWORD=Stacey1122' >> .env",
+    "echo 'DB_HOST=codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com' >> .env",
+    "echo 'DB_PORT=5432' >> .env",
+    "echo 'DB_NAME=Summit' >> .env",
+    "echo 'DB_USER=postgres' >> .env",
+    "echo 'DB_PASSWORD=Stacey1122' >> .env",
+    "echo 'JWT_SECRET=summit-jwt-secret' >> .env",
+    "echo 'SUMMIT_API_KEY=summit-api-key' >> .env",
+    "pm2 stop summit 2>/dev/null || true",
+    "pm2 delete summit 2>/dev/null || true",
+    "pm2 start dist/index.js --name summit --update-env",
+    "pm2 save",
+    "sleep 3",
+    "pm2 list",
+    "curl -s http://localhost:3000/health || echo 'Health check failed'",
+    "curl -s http://localhost:3000/api/summit/status || echo 'Summit API check failed'"
+  ]
+}
+

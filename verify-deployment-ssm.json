@@ -1,0 +1,17 @@
+{
+  "commands": [
+    "cd /var/www/summit/server",
+    "echo '=== Checking Configuration ==='",
+    "cat .env | grep PORT || echo 'PORT not found in .env'",
+    "echo ''",
+    "echo '=== Checking PM2 Status ==='",
+    "pm2 list | grep summit || echo 'Summit process not found'",
+    "echo ''",
+    "echo '=== Testing Health Endpoint ==='",
+    "curl -s http://localhost:3000/health || echo 'Health check failed - server may not be running'",
+    "echo ''",
+    "echo '=== Checking Port 3000 ==='",
+    "netstat -tlnp 2>/dev/null | grep :3000 || ss -tlnp 2>/dev/null | grep :3000 || echo 'Port 3000 not listening'"
+  ]
+}
+
