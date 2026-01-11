@@ -12,13 +12,23 @@ import presenceRoutes from "./routes/presence.js";
 import messagesRoutes from "./routes/messages.js";
 import chatRequestsRoutes from "./routes/chatRequests.js";
 import chatsRoutes from "./routes/chats.js";
+import summitRoutes from "./routes/summit.js";
 import { messageNotifier } from "./lib/messageNotifier.js";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+// Production: PORT must be set via environment variable (default: 3000)
+// NEVER use ports 5000 or 50001
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
+// Validate port is not 5000 or 50001
+if (PORT === 5000 || PORT === 50001) {
+  console.error('❌ ERROR: Port 5000 and 50001 are not allowed. Please use a different port.');
+  process.exit(1);
+}
+
 const server = createServer(app);
 
 // WebSocket server for real-time notifications
@@ -65,8 +75,16 @@ wss.on("connection", (ws, req) => {
     return;
   }
   
+  // JWT_SECRET is required in production
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret === "your-secret-key") {
+    console.error('❌ ERROR: JWT_SECRET must be set to a secure value in production');
+    ws.close(1011, "Server configuration error");
+    return;
+  }
+  
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as { id: string; email: string };
+    const decoded = jwt.verify(token, jwtSecret) as { id: string; email: string };
     console.log("✅ WebSocket token verified for user:", decoded.id);
     messageNotifier.addClient(decoded.id, ws);
     
@@ -88,13 +106,38 @@ wss.on("connection", (ws, req) => {
   }
 });
 
-// CORS configuration
+// CORS configuration - Production only, no localhost
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(origin => !origin.includes('localhost') && !origin.includes('127.0.0.1'))
+  : ['https://www.codingeverest.com', 'https://codingeverest.com', 'https://summit.codingeverest.com'];
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:5173', 'https://www.codingeverest.com', 'https://codingeverest.com'],
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
+
+// Validate CORS_ORIGIN is set in production
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+  console.warn('⚠️  WARNING: CORS_ORIGIN not set in production. Using default production origins.');
+}
+
+console.log('✅ CORS configured for origins:', allowedOrigins.join(', '));
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -109,14 +152,19 @@ app.use("/api/presence", presenceRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/chat-requests", chatRequestsRoutes);
 app.use("/api/chats", chatsRoutes);
+app.use("/api/summit", summitRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server ready at ws://localhost:${PORT}/ws`);
+// Get server hostname (never use localhost in production)
+const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
+
+server.listen(PORT, HOST, () => {
+  console.log(`✅ Server running on ${HOST}:${PORT}`);
+  console.log(`✅ WebSocket server ready on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
