@@ -8,7 +8,7 @@ const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 // Server URL - MUST be set in production (via amplify.yml)
 // Use production URL as fallback for web builds (not localhost)
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 
-  (import.meta.env.MODE === "production" ? "https://summit-api.codingeverest.com" : undefined);
+  (import.meta.env.MODE === "production" ? "https://summit.api.codingeverest.com" : undefined);
 
 if (!SERVER_URL && import.meta.env.MODE === "production") {
   console.error("❌ VITE_SERVER_URL is not set! Background chat connections will fail.");
