@@ -75,44 +75,58 @@ export async function query(text: string, params?: any[], userId?: string) {
       // Always use fallback tenant_id (no multi-tenancy needed)
       const useTenantId = finalTenantId;
       
-      // CRITICAL: Set tenant context at SESSION level BEFORE any transactions
-      // This must happen before BEGIN, otherwise validation might block us
+      // CRITICAL: Set tenant context IMMEDIATELY after connecting
+      // Try to set it before any other operations
+      // Use raw SQL strings to avoid parameter issues
       let tenantSet = false;
       const sessionSetMethods = [
-        { query: "SELECT set_config('app.tenant_id', $1, false)", name: 'set_config app.tenant_id (session)' },
-        { query: "SELECT set_config('tenant_id', $1, false)", name: 'set_config tenant_id (session)' },
-        { query: "SET app.tenant_id = $1", name: 'SET app.tenant_id' },
-        { query: "SET tenant_id = $1", name: 'SET tenant_id' }
+        `SELECT set_config('app.tenant_id', '${useTenantId}', false)`,
+        `SELECT set_config('tenant_id', '${useTenantId}', false)`,
+        `SET app.tenant_id = '${useTenantId}'`,
+        `SET tenant_id = '${useTenantId}'`
       ];
       
-      for (const method of sessionSetMethods) {
+      for (const sql of sessionSetMethods) {
         try {
-          await client.query(method.query, [useTenantId]);
-          console.log(`✅ Set tenant context (session): ${method.name} = ${useTenantId}`);
+          await client.query(sql);
+          console.log(`✅ Set tenant context: ${sql.substring(0, 50)}...`);
           tenantSet = true;
           break; // Success, stop trying other methods
         } catch (e: any) {
-          // Try next method
+          // If this is the tenant validation error, we're in trouble
+          if (e.message && e.message.includes('Tenant or user not found')) {
+            console.error(`❌ Cannot set tenant context - validation blocking: ${e.message}`);
+            // Continue trying other methods
+          }
           continue;
         }
       }
       
       // Now start transaction and also set LOCAL (for transaction-level context)
-      await client.query('BEGIN');
-      
-      // Set LOCAL within transaction as well (backup)
-      const localSetMethods = [
-        { query: 'SET LOCAL app.tenant_id = $1', name: 'SET LOCAL app.tenant_id' },
-        { query: 'SET LOCAL tenant_id = $1', name: 'SET LOCAL tenant_id' }
-      ];
-      
-      for (const method of localSetMethods) {
-        try {
-          await client.query(method.query, [useTenantId]);
-          break; // Success
-        } catch (e: any) {
-          continue;
+      try {
+        await client.query('BEGIN');
+        
+        // Set LOCAL within transaction as well (backup)
+        const localSetMethods = [
+          `SET LOCAL app.tenant_id = '${useTenantId}'`,
+          `SET LOCAL tenant_id = '${useTenantId}'`
+        ];
+        
+        for (const sql of localSetMethods) {
+          try {
+            await client.query(sql);
+            break; // Success
+          } catch (e: any) {
+            continue;
+          }
         }
+      } catch (beginError: any) {
+        // If BEGIN fails due to tenant validation, we're stuck
+        if (beginError.message && beginError.message.includes('Tenant or user not found')) {
+          console.error('❌ Cannot BEGIN transaction - tenant validation blocking');
+          throw beginError;
+        }
+        throw beginError;
       }
       
       if (!tenantSet) {
