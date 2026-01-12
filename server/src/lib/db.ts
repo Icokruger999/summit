@@ -117,58 +117,62 @@ export async function query(text: string, params?: any[], userId?: string) {
     }
 
     // Execute query with tenant context if needed
-    // For connection pooling, we need to set tenant_id in the same transaction
+    // Use a dedicated client connection to set tenant context
+    const client = await pool.connect();
     let result;
     
-    if (tenantId) {
-      // Use a transaction to set LOCAL variable and execute query
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        // Try different methods to set tenant context
-        try {
-          await client.query('SET LOCAL app.tenant_id = $1', [tenantId]);
-        } catch (e1) {
-          try {
-            await client.query('SET LOCAL tenant_id = $1', [tenantId]);
-          } catch (e2) {
-            // If both fail, the database might not support LOCAL variables
-            // or might use a different mechanism
-          }
-        }
-        // Execute the actual query
-        result = await client.query(text, params);
-        await client.query('COMMIT');
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
+    try {
+      // Determine which tenant_id to use
+      const finalTenantId = tenantId || '419d85e1-1766-4a42-b5e6-84ef72dca7db'; // Fallback to known tenant
+      
+      if (!tenantId) {
+        console.warn(`⚠️  No tenant_id found for user ${userId}, using fallback: ${finalTenantId}`);
       }
-    } else {
-      // If no tenant_id found, try using the known tenant_id as fallback
-      // This is a temporary workaround - you should fix the user-tenant relationship
-      const knownTenantId = '419d85e1-1766-4a42-b5e6-84ef72dca7db';
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
+      
+      // Start transaction to set tenant context
+      await client.query('BEGIN');
+      
+      // Try multiple methods to set tenant context (different databases use different approaches)
+      let tenantSet = false;
+      const setMethods = [
+        { query: 'SET LOCAL app.tenant_id = $1', name: 'app.tenant_id' },
+        { query: 'SET LOCAL tenant_id = $1', name: 'tenant_id' },
+        { query: "SET LOCAL \"app.tenant_id\" = $1", name: 'app.tenant_id (quoted)' },
+        { query: 'SELECT set_config(\'app.tenant_id\', $1, true)', name: 'set_config app.tenant_id' },
+        { query: 'SELECT set_config(\'tenant_id\', $1, true)', name: 'set_config tenant_id' }
+      ];
+      
+      for (const method of setMethods) {
         try {
-          await client.query('SET LOCAL app.tenant_id = $1', [knownTenantId]);
-        } catch (e1) {
-          try {
-            await client.query('SET LOCAL tenant_id = $1', [knownTenantId]);
-          } catch (e2) {
-            // Continue without tenant context
-          }
+          await client.query(method.query, [finalTenantId]);
+          console.log(`✅ Set tenant context using: ${method.name} = ${finalTenantId}`);
+          tenantSet = true;
+          break; // Success, stop trying other methods
+        } catch (e: any) {
+          // Try next method
+          continue;
         }
-        result = await client.query(text, params);
-        await client.query('COMMIT');
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
       }
+      
+      if (!tenantSet) {
+        console.warn('⚠️  Could not set tenant context using any method. Proceeding anyway...');
+      }
+      
+      // Execute the actual query within the transaction
+      result = await client.query(text, params);
+      
+      // Commit the transaction
+      await client.query('COMMIT');
+    } catch (error) {
+      // Rollback on error
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        // Ignore rollback errors
+      }
+      throw error;
+    } finally {
+      client.release();
     }
     const duration = Date.now() - start;
     if (duration > 1000) {
