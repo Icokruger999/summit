@@ -145,23 +145,35 @@ export async function query(text: string, params?: any[], userId?: string) {
       }
     }
 
-    // Get tenant_id if userId is available
+    // TEMPORARY FIX: Always use fallback tenant_id to avoid circular validation errors
+    // TODO: Once database function is identified, implement proper tenant lookup
+    const finalTenantId = '419d85e1-1766-4a42-b5e6-84ef72dca7db';
+    
+    // Try to get actual tenant_id (but don't fail if it doesn't work)
     let tenantId: string | null = null;
     if (userId) {
-      tenantId = await getTenantIdForUser(userId);
+      try {
+        tenantId = await getTenantIdForUser(userId);
+        if (tenantId) {
+          console.log(`✅ Found tenant_id ${tenantId} for user ${userId}`);
+        }
+      } catch (error: any) {
+        // If lookup fails, use fallback - this is expected until we fix the database function
+        console.warn(`⚠️  Tenant lookup failed for user ${userId}, using fallback: ${finalTenantId}`);
+      }
     }
 
-    // Execute query with tenant context if needed
+    // Execute query with tenant context
     // Use a dedicated client connection to set tenant context
     const client = await pool.connect();
     let result;
     
     try {
-      // Determine which tenant_id to use
-      const finalTenantId = tenantId || '419d85e1-1766-4a42-b5e6-84ef72dca7db'; // Fallback to known tenant
+      // Use actual tenant_id if found, otherwise fallback
+      const useTenantId = tenantId || finalTenantId;
       
-      if (!tenantId) {
-        console.warn(`⚠️  No tenant_id found for user ${userId}, using fallback: ${finalTenantId}`);
+      if (!tenantId && userId) {
+        console.log(`ℹ️  Using fallback tenant_id ${useTenantId} for user ${userId}`);
       }
       
       // Start transaction to set tenant context
@@ -179,8 +191,8 @@ export async function query(text: string, params?: any[], userId?: string) {
       
       for (const method of setMethods) {
         try {
-          await client.query(method.query, [finalTenantId]);
-          console.log(`✅ Set tenant context using: ${method.name} = ${finalTenantId}`);
+          await client.query(method.query, [useTenantId]);
+          console.log(`✅ Set tenant context using: ${method.name} = ${useTenantId}`);
           tenantSet = true;
           break; // Success, stop trying other methods
         } catch (e: any) {
