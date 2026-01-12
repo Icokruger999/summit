@@ -75,23 +75,20 @@ export async function query(text: string, params?: any[], userId?: string) {
       // Always use fallback tenant_id (no multi-tenancy needed)
       const useTenantId = finalTenantId;
       
-      // Start transaction to set tenant context
-      await client.query('BEGIN');
-      
-      // Try multiple methods to set tenant context (different databases use different approaches)
+      // CRITICAL: Set tenant context at SESSION level BEFORE any transactions
+      // This must happen before BEGIN, otherwise validation might block us
       let tenantSet = false;
-      const setMethods = [
-        { query: 'SET LOCAL app.tenant_id = $1', name: 'app.tenant_id' },
-        { query: 'SET LOCAL tenant_id = $1', name: 'tenant_id' },
-        { query: "SET LOCAL \"app.tenant_id\" = $1", name: 'app.tenant_id (quoted)' },
-        { query: 'SELECT set_config(\'app.tenant_id\', $1, true)', name: 'set_config app.tenant_id' },
-        { query: 'SELECT set_config(\'tenant_id\', $1, true)', name: 'set_config tenant_id' }
+      const sessionSetMethods = [
+        { query: "SELECT set_config('app.tenant_id', $1, false)", name: 'set_config app.tenant_id (session)' },
+        { query: "SELECT set_config('tenant_id', $1, false)", name: 'set_config tenant_id (session)' },
+        { query: "SET app.tenant_id = $1", name: 'SET app.tenant_id' },
+        { query: "SET tenant_id = $1", name: 'SET tenant_id' }
       ];
       
-      for (const method of setMethods) {
+      for (const method of sessionSetMethods) {
         try {
           await client.query(method.query, [useTenantId]);
-          console.log(`✅ Set tenant context using: ${method.name} = ${useTenantId}`);
+          console.log(`✅ Set tenant context (session): ${method.name} = ${useTenantId}`);
           tenantSet = true;
           break; // Success, stop trying other methods
         } catch (e: any) {
@@ -100,8 +97,26 @@ export async function query(text: string, params?: any[], userId?: string) {
         }
       }
       
+      // Now start transaction and also set LOCAL (for transaction-level context)
+      await client.query('BEGIN');
+      
+      // Set LOCAL within transaction as well (backup)
+      const localSetMethods = [
+        { query: 'SET LOCAL app.tenant_id = $1', name: 'SET LOCAL app.tenant_id' },
+        { query: 'SET LOCAL tenant_id = $1', name: 'SET LOCAL tenant_id' }
+      ];
+      
+      for (const method of localSetMethods) {
+        try {
+          await client.query(method.query, [useTenantId]);
+          break; // Success
+        } catch (e: any) {
+          continue;
+        }
+      }
+      
       if (!tenantSet) {
-        console.warn('⚠️  Could not set tenant context using any method. Proceeding anyway...');
+        console.warn('⚠️  Could not set tenant context. Proceeding anyway...');
       }
       
       // Execute the actual query within the transaction
