@@ -9,12 +9,13 @@ dotenv.config();
 
 // Legacy database connection (deprecated - use Supabase instead)
 // Only used by routes that haven't been migrated yet
+// Now using Supabase direct connection instead of RDS
 const dbConfig = {
-  host: process.env.DB_HOST || 'codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com',
+  host: process.env.DB_HOST || 'db.rzxhbqwzpucqwxngkxbr.supabase.co',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'Summit',
+  database: process.env.DB_NAME || 'postgres', // Supabase uses 'postgres' as default database
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'Stacey1122',
+  password: process.env.DB_PASSWORD, // Must be set in .env - get from Supabase dashboard
   ssl: {
     rejectUnauthorized: false
   },
