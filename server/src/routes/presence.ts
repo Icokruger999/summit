@@ -20,7 +20,15 @@ router.put("/", authenticate, async (req: AuthRequest, res) => {
 
     // Upsert presence using Supabase client (bypasses RLS with service role key)
     const now = new Date().toISOString();
-    const lastSeen = status === 'online' ? now : null;
+    
+    // Get existing presence to preserve last_seen if status is not 'online'
+    const { data: existing } = await supabase
+      .from('presence')
+      .select('last_seen')
+      .eq('user_id', userId)
+      .single();
+
+    const lastSeen = status === 'online' ? now : (existing?.last_seen || null);
 
     const { data, error } = await supabase
       .from('presence')
@@ -30,8 +38,7 @@ router.put("/", authenticate, async (req: AuthRequest, res) => {
         last_seen: lastSeen,
         updated_at: now
       }, {
-        onConflict: 'user_id',
-        ignoreDuplicates: false
+        onConflict: 'user_id'
       })
       .select()
       .single();
