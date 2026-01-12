@@ -121,15 +121,17 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Type', 'Authorization'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // Cache preflight requests for 24 hours
 };
 
 // Validate CORS_ORIGIN is set in production
@@ -139,7 +141,12 @@ if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
 
 console.log('✅ CORS configured for origins:', allowedOrigins.join(', '));
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS preflight requests for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // Routes
