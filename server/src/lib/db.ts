@@ -33,95 +33,12 @@ pool.on('error', (err) => {
 const tenantIdCache = new Map<string, string | null>();
 
 // Helper to get tenant_id for a user
-// Uses direct client connection and sets tenant context FIRST to avoid validation errors
+// SIMPLIFIED: Since we don't need multi-tenancy, always return null (will use fallback)
+// This avoids database queries that trigger RLS validation errors
 async function getTenantIdForUser(userId: string): Promise<string | null> {
-  // Check cache first
-  if (tenantIdCache.has(userId)) {
-    return tenantIdCache.get(userId) || null;
-  }
-
-  const client = await pool.connect();
-  try {
-    // CRITICAL: Set fallback tenant context FIRST before any queries
-    // This prevents "Tenant or user not found" errors when querying for tenant_id
-    const fallbackTenantId = '419d85e1-1766-4a42-b5e6-84ef72dca7db';
-    
-    try {
-      await client.query('BEGIN');
-      // Try to set tenant context - use fallback so we can query
-      const setMethods = [
-        'SET LOCAL app.tenant_id = $1',
-        'SET LOCAL tenant_id = $1',
-        "SET LOCAL \"app.tenant_id\" = $1",
-        "SELECT set_config('app.tenant_id', $1, true)",
-        "SELECT set_config('tenant_id', $1, true)"
-      ];
-      
-      for (const method of setMethods) {
-        try {
-          await client.query(method, [fallbackTenantId]);
-          break; // Success
-        } catch (e) {
-          continue; // Try next
-        }
-      }
-      
-      // Now try to get tenant_id from user_tenants table (if it exists)
-      try {
-        const tenantResult = await client.query(`
-          SELECT tenant_id 
-          FROM user_tenants 
-          WHERE user_id = $1 
-          LIMIT 1
-        `, [userId]);
-
-        if (tenantResult.rows.length > 0) {
-          const tenantId = tenantResult.rows[0].tenant_id;
-          await client.query('COMMIT');
-          tenantIdCache.set(userId, tenantId);
-          return tenantId;
-        }
-      } catch (e) {
-        // Table might not exist, continue to next check
-      }
-
-      // Try to get tenant_id from users table (if column exists)
-      try {
-        const userResult = await client.query(`
-          SELECT tenant_id 
-          FROM users 
-          WHERE id = $1
-        `, [userId]);
-
-        if (userResult.rows.length > 0 && userResult.rows[0].tenant_id) {
-          const tenantId = userResult.rows[0].tenant_id;
-          await client.query('COMMIT');
-          tenantIdCache.set(userId, tenantId);
-          return tenantId;
-        }
-      } catch (e) {
-        // Column might not exist, continue
-      }
-      
-      await client.query('COMMIT');
-    } catch (error) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (e) {
-        // Ignore rollback errors
-      }
-    }
-
-    // If no tenant found, cache null (will use fallback)
-    tenantIdCache.set(userId, null);
-    return null;
-  } catch (error) {
-    // If all fails, return null (will use fallback)
-    tenantIdCache.set(userId, null);
-    return null;
-  } finally {
-    client.release();
-  }
+  // Skip database lookup entirely - we don't need multi-tenancy
+  // Always return null, which will trigger use of fallback tenant_id
+  return null;
 }
 
 // UUID pattern matcher
@@ -145,36 +62,18 @@ export async function query(text: string, params?: any[], userId?: string) {
       }
     }
 
-    // TEMPORARY FIX: Always use fallback tenant_id to avoid circular validation errors
-    // TODO: Once database function is identified, implement proper tenant lookup
+    // SIMPLIFIED: Always use fallback tenant_id since we don't need multi-tenancy
+    // The company field is just profile info, not a tenant grouping mechanism
     const finalTenantId = '419d85e1-1766-4a42-b5e6-84ef72dca7db';
     
-    // Try to get actual tenant_id (but don't fail if it doesn't work)
-    let tenantId: string | null = null;
-    if (userId) {
-      try {
-        tenantId = await getTenantIdForUser(userId);
-        if (tenantId) {
-          console.log(`✅ Found tenant_id ${tenantId} for user ${userId}`);
-        }
-      } catch (error: any) {
-        // If lookup fails, use fallback - this is expected until we fix the database function
-        console.warn(`⚠️  Tenant lookup failed for user ${userId}, using fallback: ${finalTenantId}`);
-      }
-    }
-
     // Execute query with tenant context
     // Use a dedicated client connection to set tenant context
     const client = await pool.connect();
     let result;
     
     try {
-      // Use actual tenant_id if found, otherwise fallback
-      const useTenantId = tenantId || finalTenantId;
-      
-      if (!tenantId && userId) {
-        console.log(`ℹ️  Using fallback tenant_id ${useTenantId} for user ${userId}`);
-      }
+      // Always use fallback tenant_id (no multi-tenancy needed)
+      const useTenantId = finalTenantId;
       
       // Start transaction to set tenant context
       await client.query('BEGIN');
@@ -237,13 +136,7 @@ export async function query(text: string, params?: any[], userId?: string) {
       console.error('   3. A database function/trigger is validating tenant access');
       if (userId) {
         console.error(`   User ID: ${userId}`);
-        const tenantId = await getTenantIdForUser(userId);
-        if (!tenantId) {
-          console.error('   ⚠️  No tenant_id found for this user!');
-          console.error('   💡 You may need to create the user-tenant relationship in the database.');
-        } else {
-          console.error(`   Tenant ID: ${tenantId}`);
-        }
+        console.error('   💡 Using fallback tenant_id (multi-tenancy not needed for this app)');
       }
     }
     
