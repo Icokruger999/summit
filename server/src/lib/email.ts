@@ -1,21 +1,38 @@
-// Email service using AWS SES
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+// Email service using SMTP (PrivateEmail.com)
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Initialize SES client
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || 'eu-west-1',
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined, // Use IAM role if credentials not provided (EC2 instance)
+// SMTP configuration
+const smtpConfig = {
+  host: process.env.SMTP_HOST || 'mail.privateemail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false, // true for 465, false for other ports (587 uses STARTTLS)
+  auth: {
+    user: process.env.SMTP_USER || process.env.SMTP_EMAIL || 'info@streamyo.net',
+    pass: process.env.SMTP_PASSWORD || '',
+  },
+  tls: {
+    // Do not fail on invalid certificates
+    rejectUnauthorized: false,
+  },
+};
+
+// Create transporter
+const transporter = nodemailer.createTransport(smtpConfig);
+
+// Verify SMTP connection on startup
+transporter.verify((error) => {
+  if (error) {
+    console.error('❌ SMTP connection error:', error);
+  } else {
+    console.log('✅ SMTP server is ready to send emails');
+  }
 });
 
-const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@summit.codingeverest.com';
+const FROM_EMAIL = process.env.SMTP_EMAIL || process.env.SMTP_USER || 'info@streamyo.net';
+const FROM_NAME = process.env.SMTP_FROM_NAME || 'Summit';
 
 // HTML email template for temporary password
 function getTempPasswordEmailTemplate(name: string, tempPassword: string, loginUrl: string): string {
@@ -80,33 +97,9 @@ function getTempPasswordEmailTemplate(name: string, tempPassword: string, loginU
   `.trim();
 }
 
-// Send temporary password email
-export async function sendTempPasswordEmail(
-  email: string,
-  name: string,
-  tempPassword: string
-): Promise<void> {
-  try {
-    const loginUrl = process.env.FRONTEND_URL || 'https://summit.codingeverest.com/login';
-    const htmlBody = getTempPasswordEmailTemplate(name, tempPassword, loginUrl);
-    
-    const command = new SendEmailCommand({
-      Source: FROM_EMAIL,
-      Destination: {
-        ToAddresses: [email],
-      },
-      Message: {
-        Subject: {
-          Data: 'Welcome to Summit - Your Temporary Password',
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Html: {
-            Data: htmlBody,
-            Charset: 'UTF-8',
-          },
-          Text: {
-            Data: `
+// Plain text version for email clients that don't support HTML
+function getTempPasswordEmailText(name: string, tempPassword: string, loginUrl: string): string {
+  return `
 Welcome to Summit!
 
 Hello ${name || 'there'},
@@ -127,15 +120,31 @@ Please sign in and create your permanent password as soon as possible.
 If you didn't create this account, please ignore this email.
 
 © ${new Date().getFullYear()} Summit by Coding Everest. All rights reserved.
-            `.trim(),
-            Charset: 'UTF-8',
-          },
-        },
-      },
-    });
+  `.trim();
+}
 
-    const response = await sesClient.send(command);
-    console.log('✅ Temp password email sent successfully:', response.MessageId);
+// Send temporary password email
+export async function sendTempPasswordEmail(
+  email: string,
+  name: string,
+  tempPassword: string
+): Promise<void> {
+  try {
+    const loginUrl = process.env.FRONTEND_URL || 'https://summit.codingeverest.com/login';
+    const htmlBody = getTempPasswordEmailTemplate(name, tempPassword, loginUrl);
+    const textBody = getTempPasswordEmailText(name, tempPassword, loginUrl);
+
+    const mailOptions = {
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: email,
+      subject: 'Welcome to Summit - Your Temporary Password',
+      text: textBody,
+      html: htmlBody,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Temp password email sent successfully:', info.messageId);
+    console.log('   To:', email);
   } catch (error: any) {
     console.error('❌ Error sending temp password email:', error);
     throw new Error(`Failed to send email: ${error.message}`);
