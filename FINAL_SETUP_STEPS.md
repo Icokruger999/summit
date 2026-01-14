@@ -6,6 +6,8 @@ The AWS CLI user doesn't have IAM permissions. You need to add the SES policy ma
 
 ## Step 1: Add SES Policy (You Do This - 2 minutes)
 
+**Why?** The EC2 instance needs permission to send emails via AWS SES. Without this policy, email sending will fail with "Access Denied". See `WHY_IAM_POLICY_NEEDED.md` for detailed explanation.
+
 1. Go to: https://console.aws.amazon.com/iam/home?region=eu-west-1#/roles/EC2-SSM-Role
 2. Click "Add permissions" → "Create inline policy"
 3. Click "JSON" tab
