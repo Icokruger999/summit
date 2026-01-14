@@ -12,9 +12,9 @@
 
 ### ⏳ Requires Your Action
 
-1. **IAM Role Setup** - Choose one option (see below)
-2. **Email Verification** - Verify sender email in AWS SES
-3. **Provide Email Address** - Tell me which email to use
+1. **IAM Role Setup** - Add SES permissions to existing `EC2-SSM-Role` (see Step 1 below)
+2. **Email Verification** - Verify sender email in AWS SES (see Step 2 below)
+3. **Provide Email Address** - Tell me which email you verified
 
 Once you complete these, I'll automatically configure the `.env` file and restart the server.
 
@@ -39,9 +39,9 @@ Once you complete these, I'll automatically configure the `.env` file and restar
 
 ## 📋 What You Need to Do
 
-### Step 1: IAM Setup (Choose One)
+### Step 1: Add SES Permissions to Existing Role (2 minutes)
 
-#### Option A: Add SES to Existing Role (Recommended - 2 minutes)
+**We're using the existing `EC2-SSM-Role` - only adding email permissions.**
 
 **Safest for Milo** - Only adds email permissions, doesn't change anything else.
 
