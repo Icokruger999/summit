@@ -73,6 +73,7 @@ export async function apiRequest<T>(
 }
 
 // Auth API
+// Signup: No password required - temporary password sent via email
 export const authApi = {
   register: async (email: string, name: string, jobTitle?: string, phone?: string, company?: string) => {
     return apiRequest<{ message: string; email: string }>("/api/auth/register", {
