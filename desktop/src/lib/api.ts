@@ -74,16 +74,22 @@ export async function apiRequest<T>(
 
 // Auth API
 export const authApi = {
-  register: async (email: string, password: string, name?: string) => {
-    return apiRequest<{ user: any; token: string }>("/api/auth/register", {
+  register: async (email: string, name: string, jobTitle?: string, phone?: string, company?: string) => {
+    return apiRequest<{ message: string; email: string }>("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ 
+        email, 
+        name, 
+        job_title: jobTitle || "N/A",
+        phone: phone || "N/A",
+        company: company || "N/A"
+      }),
     });
   },
 
   login: async (email: string, password: string) => {
     try {
-      return await apiRequest<{ user: any; token: string }>("/api/auth/login", {
+      return await apiRequest<{ user: any; token: string; requiresPasswordChange?: boolean }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -94,6 +100,13 @@ export const authApi = {
       }
       throw error;
     }
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    return apiRequest<{ message: string }>("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   },
 
   getMe: async () => {

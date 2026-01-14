@@ -1,51 +1,77 @@
 import { useState } from "react";
 import { authApi } from "../lib/api";
-import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus, Briefcase, Phone, AlertTriangle } from "lucide-react";
 import logoImage from "../assets/logo.png";
 
 export default function Login() {
+  // Login state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Signup state
   const [name, setName] = useState("");
+  const [jobTitle, setJobTitle] = useState("N/A");
+  const [phone, setPhone] = useState("N/A");
+  const [company, setCompany] = useState("N/A");
+  
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountNotFound, setAccountNotFound] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setAccountNotFound(false);
+    setSignupSuccess(false);
 
     try {
       if (isSignUp) {
-        // Validate passwords match
-        if (password !== confirmPassword) {
-          setError("Passwords do not match");
+        // Validate required fields
+        if (!name || name.trim() === "") {
+          setError("Name is required");
           setLoading(false);
           return;
         }
 
-        // Validate password length
-        if (password.length < 6) {
-          setError("Password must be at least 6 characters");
+        if (!email || email.trim() === "") {
+          setError("Email is required");
           setLoading(false);
           return;
         }
 
-        const { user, token } = await authApi.register(email, password, name || undefined);
-        localStorage.setItem("auth_token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-        // Set flag to show first login popup
-        localStorage.setItem("account_just_created", "true");
-        // Force page reload to ensure App component re-initializes with auth state
-        window.location.href = "/";
+        // Register user (no password needed)
+        await authApi.register(
+          email.trim(),
+          name.trim(),
+          jobTitle.trim() === "" || jobTitle.trim().toUpperCase() === "N/A" ? undefined : jobTitle.trim(),
+          phone.trim() === "" || phone.trim().toUpperCase() === "N/A" ? undefined : phone.trim(),
+          company.trim() === "" || company.trim().toUpperCase() === "N/A" ? undefined : company.trim()
+        );
+
+        // Show success message
+        setSignupSuccess(true);
+        setError(null);
+        
+        // Clear form
+        setName("");
+        setEmail("");
+        setJobTitle("N/A");
+        setPhone("N/A");
+        setCompany("N/A");
       } else {
-        const { user, token } = await authApi.login(email, password);
-        localStorage.setItem("auth_token", token);
-        localStorage.setItem("user", JSON.stringify(user));
+        // Login
+        const response = await authApi.login(email, password);
+        localStorage.setItem("auth_token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+        
+        // Store password change requirement
+        if (response.requiresPasswordChange) {
+          localStorage.setItem("requires_password_change", "true");
+        }
+        
         // Force page reload to ensure App component re-initializes with auth state
         window.location.href = "/";
       }
@@ -89,8 +115,8 @@ export default function Login() {
     setIsSignUp(true);
     setError(null);
     setAccountNotFound(false);
+    setSignupSuccess(false);
     setPassword("");
-    setConfirmPassword("");
   };
 
   return (
@@ -115,8 +141,20 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Success Message (Signup) */}
+          {signupSuccess && (
+            <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
+              <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  Account created successfully! Please check your email for your temporary password.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
-          {error && (
+          {error && !signupSuccess && (
             <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
               accountNotFound 
                 ? "bg-blue-50 border-blue-500 text-blue-700" 
@@ -139,13 +177,25 @@ export default function Login() {
             </div>
           )}
 
+          {/* Warning Message (Signup) */}
+          {isSignUp && !signupSuccess && (
+            <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-amber-50 border-amber-500 text-amber-700">
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  A temporary password will be sent to your email. You must change it within 24 hours or your account will be deleted.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {/* Email Field */}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Mail className="w-4 h-4 text-blue-500" />
-                Email address
+                Email address {isSignUp && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
                 <input
@@ -163,18 +213,19 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Name Field (Sign Up Only) */}
+            {/* Name Field (Sign Up Only - Required) */}
             {isSignUp && (
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <UserPlus className="w-4 h-4 text-blue-500" />
-                  Full Name (Optional)
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="name"
                   name="name"
                   type="text"
                   autoComplete="name"
+                  required
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
                   placeholder="John Doe"
                   value={name}
@@ -183,55 +234,83 @@ export default function Login() {
               </div>
             )}
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-blue-500" />
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
-                  required
-                  className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                  placeholder={isSignUp ? "Create a password" : "Enter your password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Confirm Password Field (Sign Up Only) */}
+            {/* Job Title Field (Sign Up Only - Optional) */}
             {isSignUp && (
               <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-blue-500" />
+                  Job Title / Role
+                </label>
+                <input
+                  id="jobTitle"
+                  name="jobTitle"
+                  type="text"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                  placeholder="N/A (optional)"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Phone Field (Sign Up Only - Optional) */}
+            {isSignUp && (
+              <div className="space-y-2">
+                <label htmlFor="phone" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-500" />
+                  Cell / Phone Number
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                  placeholder="N/A (optional)"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Company Field (Sign Up Only - Optional) */}
+            {isSignUp && (
+              <div className="space-y-2">
+                <label htmlFor="company" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-blue-500" />
+                  Company / Business Name
+                </label>
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                  placeholder="N/A (optional)"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Password Field (Login Only) */}
+            {!isSignUp && (
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-blue-500" />
-                  Confirm Password
+                  Password
                 </label>
                 <div className="relative">
                   <input
-                    id="confirmPassword"
-                    name="confirmPassword"
+                    id="password"
+                    name="password"
                     type="password"
-                    autoComplete="new-password"
+                    autoComplete="current-password"
                     required
-                    className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400 ${
-                      confirmPassword && password !== confirmPassword
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-200"
-                    }`}
-                    placeholder="Re-enter your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  {confirmPassword && password !== confirmPassword && (
-                    <p className="text-xs text-red-600 mt-1 ml-1">Passwords do not match</p>
-                  )}
                 </div>
               </div>
             )}
@@ -239,7 +318,7 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || signupSuccess}
               className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-sky-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -273,9 +352,13 @@ export default function Login() {
                 setIsSignUp(!isSignUp);
                 setError(null);
                 setAccountNotFound(false);
+                setSignupSuccess(false);
                 setPassword("");
-                setConfirmPassword("");
                 setName("");
+                setEmail("");
+                setJobTitle("N/A");
+                setPhone("N/A");
+                setCompany("N/A");
               }}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >

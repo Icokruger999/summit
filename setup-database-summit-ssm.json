@@ -1,0 +1,26 @@
+{
+  "InstanceIds": [
+    "i-0fba58db502cc8d39"
+  ],
+  "DocumentName": "AWS-RunShellScript",
+  "Parameters": {
+    "commands": [
+      "cd /home/ubuntu",
+      "export DEBIAN_FRONTEND=noninteractive",
+      "sudo apt update -y",
+      "sudo apt install -y postgresql postgresql-contrib pgbouncer",
+      "sudo systemctl start postgresql",
+      "sudo systemctl enable postgresql",
+      "sleep 5",
+      "DB_PASSWORD=$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-25)",
+      "DB_USER='summit_user'",
+      "DB_NAME='summit'",
+      "sudo -u postgres psql -c \"CREATE DATABASE $DB_NAME;\"",
+      "sudo -u postgres psql -c \"CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';\"",
+      "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;\"",
+      "sudo -u postgres psql -d $DB_NAME -c \"GRANT ALL ON SCHEMA public TO $DB_USER;\"",
+      "echo 'Password: '$DB_PASSWORD",
+      "echo 'Save this password!'"
+    ]
+  }
+}

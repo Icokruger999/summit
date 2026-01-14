@@ -250,6 +250,7 @@ export default function Dashboard({ user }: DashboardProps) {
       // Clear auth data
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
+      localStorage.removeItem("requires_password_change");
       
       // Force navigation to login page
       window.location.href = "/login";

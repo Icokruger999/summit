@@ -1,7 +1,0 @@
-﻿{
-  "InstanceIds": ["i-0fba58db502cc8d39"],
-  "DocumentName": "AWS-RunShellScript",
-  "Parameters": {
-    "commands": ["cd /var/www/summit/database && node setup.cjs 2>&1"]
-  }
-}

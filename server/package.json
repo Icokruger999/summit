@@ -13,6 +13,7 @@
     "status:pm2": "pm2 status"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.490.0",
     "@supabase/supabase-js": "^2.90.1",
     "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",

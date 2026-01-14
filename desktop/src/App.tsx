@@ -7,6 +7,7 @@ import ProfileWrapper from "./components/ProfileWrapper";
 import AssetDownloader from "./components/Installer/AssetDownloader";
 import PermissionsRequest from "./components/PermissionsRequest";
 import FirstLoginPopup from "./components/FirstLoginPopup";
+import PasswordChange from "./components/PasswordChange";
 import { authApi, getAuthToken } from "./lib/api";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [downloadingAssets, setDownloadingAssets] = useState(false);
   const [showPermissionsRequest, setShowPermissionsRequest] = useState(false);
   const [showFirstLoginPopup, setShowFirstLoginPopup] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   useEffect(() => {
     // Check if assets are installed (only in Tauri)
@@ -67,12 +69,29 @@ function App() {
         setUser(userData);
         setLoading(false);
         
+        // Check if password change is required from localStorage (check immediately)
+        const requiresPasswordChange = localStorage.getItem("requires_password_change") === "true";
+        if (requiresPasswordChange) {
+          setShowPasswordChange(true);
+          return;
+        }
+        
         // Verify token is still valid in the background
         authApi.getMe()
           .then((currentUser) => {
             // Update with fresh user data from server
             setUser(currentUser);
             localStorage.setItem("user", JSON.stringify(currentUser));
+            
+            // Check if password change is required (highest priority - blocks everything)
+            const requiresPasswordChange = 
+              localStorage.getItem("requires_password_change") === "true" ||
+              currentUser.requiresPasswordChange === true;
+            
+            if (requiresPasswordChange) {
+              setShowPasswordChange(true);
+              return;
+            }
             
             // Check if first login popup should be shown
             const accountJustCreated = localStorage.getItem("account_just_created") === "true";
@@ -148,6 +167,22 @@ function App() {
     );
   }
 
+  // Show password change screen if required (MANDATORY - blocks everything)
+  if (showPasswordChange && user) {
+    return (
+      <PasswordChange
+        onComplete={() => {
+          setShowPasswordChange(false);
+          // After password change, check for permissions
+          const permissionsRequested = localStorage.getItem("permissions_requested") === "true";
+          if (!permissionsRequested) {
+            setShowPermissionsRequest(true);
+          }
+        }}
+      />
+    );
+  }
+
   // Show first login popup if account was just created
   if (showFirstLoginPopup && user) {
     return (
@@ -191,6 +226,7 @@ function App() {
           element={user ? <Settings user={user} onSignOut={() => {
             localStorage.removeItem("auth_token");
             localStorage.removeItem("user");
+            localStorage.removeItem("requires_password_change");
             window.location.href = "/login";
           }} /> : <Navigate to="/login" replace />}
         />
