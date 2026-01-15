@@ -13,10 +13,18 @@ async function testEmail() {
   }
 
   try {
-    console.log('📧 Testing email sending...');
+    console.log('📧 Testing email sending via SMTP (Namecheap Private Email)...');
     console.log(`   To: ${testEmail}`);
-    console.log(`   From: ${process.env.SES_FROM_EMAIL || 'info@streamyo.net'}`);
+    console.log(`   From: ${process.env.SMTP_FROM_EMAIL || process.env.SES_FROM_EMAIL || 'info@streamyo.net'}`);
+    console.log(`   SMTP Host: ${process.env.SMTP_HOST || 'NOT SET'}`);
+    console.log(`   SMTP Port: ${process.env.SMTP_PORT || '587'}`);
     console.log('');
+    
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('❌ SMTP not configured!');
+      console.error('   Required: SMTP_HOST, SMTP_USER, SMTP_PASS');
+      process.exit(1);
+    }
     
     await sendTempPasswordEmail(
       testEmail,
@@ -24,17 +32,17 @@ async function testEmail() {
       'TEST123456'
     );
     
-    console.log('✅ Test email sent successfully!');
+    console.log('✅ Test email sent successfully via SMTP!');
     console.log('   Check your inbox (and spam folder) for the email.');
     process.exit(0);
   } catch (error: any) {
     console.error('❌ Failed to send test email:', error.message);
     console.error('');
     console.error('Common issues:');
-    console.error('  1. Email address not verified in AWS SES');
-    console.error('  2. AWS credentials not configured');
-    console.error('  3. AWS_REGION not set correctly');
-    console.error('  4. SES_FROM_EMAIL not verified in SES');
+    console.error('  1. SMTP credentials not configured (SMTP_HOST, SMTP_USER, SMTP_PASS)');
+    console.error('  2. SMTP server connection failed');
+    console.error('  3. Authentication failed (wrong username/password)');
+    console.error('  4. Firewall blocking SMTP port');
     process.exit(1);
   }
 }
