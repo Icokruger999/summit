@@ -258,7 +258,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Error Message with Resend Option */}
           {error && !signupSuccess && (
             <div className="space-y-3">
               <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
@@ -287,25 +287,26 @@ export default function Login() {
               </div>
               
               {/* Show resend email option if account exists with temp password */}
-              {error.includes("Did you receive your temporary password") && signupEmail && (
+              {(error.includes("Did you receive your temporary password") || 
+                error.includes("already exists") || 
+                error.toLowerCase().includes("user already exists")) && 
+                signupEmail && (
                 <div className="text-center">
                   <button
                     type="button"
                     onClick={handleResendEmail}
-                    disabled={resendEmailLoading || resendEmailClicked}
+                    disabled={resendEmailLoading}
                     className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
                   >
                     {resendEmailLoading 
                       ? "Sending..." 
-                      : resendEmailClicked 
-                        ? "Email sent!" 
-                        : "If not, click here to resend your temporary password"}
+                      : "Click here to resend your temporary password"}
                   </button>
                 </div>
               )}
 
               {/* Resend Success Message (when resending from error state) */}
-              {resendEmailSuccess && signupEmail && error.includes("Did you receive your temporary password") && (
+              {resendEmailSuccess && signupEmail && (
                 <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
                   <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
                   <div className="flex-1">
@@ -317,7 +318,7 @@ export default function Login() {
               )}
 
               {/* Resend Error Message (when resending from error state) */}
-              {resendEmailError && signupEmail && error.includes("Did you receive your temporary password") && (
+              {resendEmailError && signupEmail && (
                 <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-red-50 border-red-500 text-red-700">
                   <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
                   <div className="flex-1">
