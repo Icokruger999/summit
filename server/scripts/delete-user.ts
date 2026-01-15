@@ -1,4 +1,4 @@
-import { query, getUserByEmail } from '../lib/db.js';
+import { query, getUserByEmail } from '../src/lib/db.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
