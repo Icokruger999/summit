@@ -5,9 +5,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // AWS SES configuration
-const sesClient = new SESClient({
+// Use explicit credentials from environment variables (for amplify group user)
+// Falls back to IAM role if not provided
+const sesClientConfig: any = {
   region: process.env.AWS_REGION || 'eu-west-1',
-});
+};
+
+// Use explicit AWS credentials if provided (for amplify group)
+if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  sesClientConfig.credentials = {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  };
+  console.log('✅ Using explicit AWS credentials for SES (amplify group)');
+} else {
+  console.log('⚠️  No explicit AWS credentials found, using IAM role');
+}
+
+const sesClient = new SESClient(sesClientConfig);
 
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'info@streamyo.net';
 const FROM_NAME = process.env.SES_FROM_NAME || 'Summit';
