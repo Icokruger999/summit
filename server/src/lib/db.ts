@@ -10,13 +10,16 @@ dotenv.config();
 // Connects through PgBouncer (port 6432) for connection pooling
 const dbConfig = {
   host: process.env.DB_HOST || '127.0.0.1',
-  port: parseInt(process.env.DB_PORT || '6432'), // PgBouncer port
+  port: parseInt(process.env.DB_PORT || '6432'), // PgBouncer port (NOT 5432 - direct Postgres)
   database: process.env.DB_NAME || 'summit',
   user: process.env.DB_USER || 'summit_user',
   password: process.env.DB_PASSWORD,
   max: 20, // Max connections in pool (should be <= PgBouncer default_pool_size)
-  idleTimeoutMillis: 30000,
+  idleTimeoutMillis: 30000, // Close idle connections after 30s
   connectionTimeoutMillis: 10000,
+  // Keep-alive settings to prevent EC2 network layer from killing connections
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000, // Send keep-alive after 10s of inactivity
 };
 
 // Create connection pool
