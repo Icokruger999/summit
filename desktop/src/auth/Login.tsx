@@ -114,8 +114,24 @@ export default function Login() {
           setError(errorMessage);
         }
       } else {
-        // For sign up, show the actual error
-        setError(errorMessage);
+        // For sign up, handle specific error cases
+        const errorData = err.errorData || {};
+        const errorCode = errorData.error;
+        
+        if (errorCode === "ACCOUNT_VERIFIED") {
+          // User has already verified their account (has permanent password)
+          setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
+        } else if (errorCode === "ACCOUNT_EXISTS_TEMP_PASSWORD") {
+          // User exists but hasn't changed password yet
+          setError(errorData.message || "An account with this email already exists. Did you receive your temporary password?");
+          setSignupEmail(email.trim()); // Store email for resend functionality
+          setResendEmailClicked(false); // Allow resend
+          setResendEmailError(null);
+          setResendEmailSuccess(false);
+        } else {
+          // For other errors, show the actual error
+          setError(errorMessage);
+        }
       }
     } finally {
       setLoading(false);
@@ -149,15 +165,18 @@ export default function Login() {
     setResendEmailSuccess(false);
 
     try {
-      await authApi.resendEmail(signupEmail);
+      const response = await authApi.resendEmail(signupEmail);
       setResendEmailClicked(true); // Mark as clicked - can only click once
       setResendEmailSuccess(true);
       setResendEmailError(null);
     } catch (err: any) {
-      const errorMessage = err.message || err.error || "Failed to resend email. Please try again later.";
+      console.error("Resend email error:", err);
+      const errorData = err.errorData || {};
+      const errorMessage = errorData.error || err.message || err.error || "Failed to resend email. Please try again later.";
       setResendEmailError(errorMessage);
       setResendEmailSuccess(false);
-      // Allow retry if there's an error (but still show error message)
+      // Don't mark as clicked on error, so user can retry
+      setResendEmailClicked(false);
     } finally {
       setResendEmailLoading(false);
     }
@@ -239,25 +258,73 @@ export default function Login() {
 
           {/* Error Message */}
           {error && !signupSuccess && (
-            <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
-              accountNotFound 
-                ? "bg-blue-50 border-blue-500 text-blue-700" 
-                : "bg-red-50 border-red-500 text-red-700"
-            }`}>
-              <div className={`w-2 h-2 rounded-full mt-1.5 ${
-                accountNotFound ? "bg-blue-500" : "bg-red-500"
-              }`}></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{error}</p>
-                {accountNotFound && (
-                  <button
-                    onClick={handleSwitchToSignUp}
-                    className="mt-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-lg hover:shadow-lg transition-all"
-                  >
-                    Create Account
-                  </button>
-                )}
+            <div className="space-y-3">
+              <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
+                accountNotFound 
+                  ? "bg-blue-50 border-blue-500 text-blue-700" 
+                  : error.includes("already verified") || error.includes("log in")
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "bg-red-50 border-red-500 text-red-700"
+              }`}>
+                <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                  accountNotFound || error.includes("already verified") || error.includes("log in")
+                    ? "bg-blue-500" 
+                    : "bg-red-500"
+                }`}></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{error}</p>
+                  {accountNotFound && (
+                    <button
+                      onClick={handleSwitchToSignUp}
+                      className="mt-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-lg hover:shadow-lg transition-all"
+                    >
+                      Create Account
+                    </button>
+                  )}
+                </div>
               </div>
+              
+              {/* Show resend email option if account exists with temp password */}
+              {error.includes("Did you receive your temporary password") && signupEmail && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={resendEmailLoading || resendEmailClicked}
+                    className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+                  >
+                    {resendEmailLoading 
+                      ? "Sending..." 
+                      : resendEmailClicked 
+                        ? "Email sent!" 
+                        : "If not, click here to resend your temporary password"}
+                  </button>
+                </div>
+              )}
+
+              {/* Resend Success Message (when resending from error state) */}
+              {resendEmailSuccess && signupEmail && error.includes("Did you receive your temporary password") && (
+                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
+                  <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      A new temporary password has been sent to your email.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Resend Error Message (when resending from error state) */}
+              {resendEmailError && signupEmail && error.includes("Did you receive your temporary password") && (
+                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-red-50 border-red-500 text-red-700">
+                  <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {resendEmailError}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

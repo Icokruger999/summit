@@ -68,7 +68,20 @@ router.post("/register", async (req, res) => {
     // Check if user already exists (case-insensitive)
     const existingUser = await getUserByEmail(normalizedEmail);
     if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
+      // Check if user has already changed password (has permanent password)
+      if (existingUser.password_hash && !existingUser.temp_password_hash) {
+        return res.status(400).json({ 
+          error: "ACCOUNT_VERIFIED",
+          message: "You have already verified your account. Please log in with your email and the password you chose."
+        });
+      }
+      
+      // User exists but hasn't changed password yet (still has temp password)
+      return res.status(400).json({ 
+        error: "ACCOUNT_EXISTS_TEMP_PASSWORD",
+        message: "An account with this email already exists. Did you receive your temporary password?",
+        email: normalizedEmail
+      });
     }
 
     // Generate temporary password
