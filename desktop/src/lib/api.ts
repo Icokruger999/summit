@@ -347,3 +347,57 @@ export const chatRequestsApi = {
   },
 };
 
+
+// Subscriptions API
+export const subscriptionsApi = {
+  getStatus: async () => {
+    return apiRequest<{
+      status: 'trial' | 'active' | 'expired' | 'locked';
+      trial_started_at?: string;
+      hours_remaining?: number;
+      subscription?: {
+        id: string;
+        owner_id: string;
+        tier: 'basic' | 'pack' | 'enterprise';
+        status: 'active' | 'expired' | 'cancelled';
+        max_users: number;
+        created_at: string;
+        expires_at?: string;
+      };
+      is_owner?: boolean;
+      current_users?: number;
+      max_users?: number;
+    }>("/api/subscriptions/status");
+  },
+
+  createSubscription: async (tier: 'basic' | 'pack' | 'enterprise') => {
+    return apiRequest<{ message: string; subscription: any }>("/api/subscriptions/create", {
+      method: "POST",
+      body: JSON.stringify({ tier }),
+    });
+  },
+
+  selectPlan: async (tier: 'basic' | 'pack' | 'enterprise') => {
+    return apiRequest<{ message: string; subscription?: any; contactEmail?: string; note?: string }>("/api/subscriptions/select", {
+      method: "POST",
+      body: JSON.stringify({ tier }),
+    });
+  },
+
+  getUsers: async () => {
+    return apiRequest<{ users: any[]; current_count: number; max_users: number }>("/api/subscriptions/users");
+  },
+
+  addUser: async (email: string) => {
+    return apiRequest<{ message: string; user: any }>("/api/subscriptions/users/add", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  removeUser: async (userId: string) => {
+    return apiRequest<{ message: string }>(`/api/subscriptions/users/${userId}`, {
+      method: "DELETE",
+    });
+  },
+};
