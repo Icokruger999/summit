@@ -9,7 +9,7 @@ const sesClient = new SESClient({
   region: process.env.AWS_REGION || 'eu-west-1',
 });
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'summit@codingeverest.com';
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'info@streamyo.net';
 const FROM_NAME = process.env.SES_FROM_NAME || 'Summit';
 
 // Beautiful HTML email template for temporary password
