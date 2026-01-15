@@ -1,31 +1,10 @@
-// Email service using AWS SES with SMTP fallback
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+// Email service using SMTP (Namecheap Private Email)
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// AWS SES configuration
-// Use explicit credentials from environment variables (for amplify group user)
-// Falls back to IAM role if not provided
-const sesClientConfig: any = {
-  region: process.env.AWS_REGION || 'eu-west-1',
-};
-
-// Use explicit AWS credentials if provided (for amplify group)
-if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-  sesClientConfig.credentials = {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  };
-  console.log('✅ Using explicit AWS credentials for SES (amplify group)');
-} else {
-  console.log('⚠️  No explicit AWS credentials found, using IAM role');
-}
-
-const sesClient = new SESClient(sesClientConfig);
-
-// SMTP configuration for fallback
+// SMTP configuration (Namecheap Private Email)
 let smtpTransporter: nodemailer.Transporter | null = null;
 if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
   smtpTransporter = nodemailer.createTransport({
@@ -37,9 +16,13 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
       pass: process.env.SMTP_PASS,
     },
   });
-  console.log('✅ SMTP transporter configured as fallback');
+  console.log('✅ SMTP transporter configured (Namecheap Private Email)');
+  console.log(`   Host: ${process.env.SMTP_HOST}`);
+  console.log(`   Port: ${process.env.SMTP_PORT || '587'}`);
+  console.log(`   From: ${process.env.SMTP_FROM_EMAIL || process.env.SES_FROM_EMAIL || 'info@streamyo.net'}`);
 } else {
-  console.log('⚠️  SMTP not configured - only SES will be used');
+  console.error('❌ SMTP not configured! Email sending will fail.');
+  console.error('   Required: SMTP_HOST, SMTP_USER, SMTP_PASS');
 }
 
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || 'info@streamyo.net';
@@ -230,82 +213,39 @@ If you didn't create this account, please ignore this email.
   `.trim();
 }
 
-// Send temporary password email using AWS SES with SMTP fallback
+// Send temporary password email using SMTP (Namecheap Private Email)
 export async function sendTempPasswordEmail(
   email: string,
   name: string,
   tempPassword: string
 ): Promise<void> {
+  if (!smtpTransporter) {
+    throw new Error('SMTP is not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables.');
+  }
+
   const loginUrl = process.env.FRONTEND_URL || 'https://summit.codingeverest.com/login';
   const htmlBody = getTempPasswordEmailTemplate(name, tempPassword, loginUrl);
   const textBody = getTempPasswordEmailText(name, tempPassword, loginUrl);
   const subject = 'Welcome to Summit - Your Temporary Password';
 
-  // Try AWS SES first
   try {
-    const command = new SendEmailCommand({
-      Source: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      Destination: {
-        ToAddresses: [email],
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Html: {
-            Data: htmlBody,
-            Charset: 'UTF-8',
-          },
-          Text: {
-            Data: textBody,
-            Charset: 'UTF-8',
-          },
-        },
-      },
+    const smtpResult = await smtpTransporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: email,
+      subject: subject,
+      html: htmlBody,
+      text: textBody,
     });
 
-    const result = await sesClient.send(command);
-    console.log('✅ Temp password email sent successfully via AWS SES:', result.MessageId);
+    console.log('✅ Temp password email sent successfully via SMTP (Namecheap Private Email)');
     console.log('   To:', email);
-    return; // Success, exit early
-  } catch (sesError: any) {
-    console.warn('⚠️  AWS SES failed, attempting SMTP fallback...', sesError.message);
-    
-    // Check if SES error is due to verification or permissions
-    const isSESVerificationError = 
-      sesError.Code === 'MessageRejected' ||
-      sesError.Code === 'AccessDenied' ||
-      sesError.message?.includes('not verified') ||
-      sesError.message?.includes('not authorized');
-
-    // Only fallback to SMTP if SMTP is configured and SES failed due to verification/permissions
-    if (isSESVerificationError && smtpTransporter) {
-      try {
-        const smtpResult = await smtpTransporter.sendMail({
-          from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-          to: email,
-          subject: subject,
-          html: htmlBody,
-          text: textBody,
-        });
-
-        console.log('✅ Temp password email sent successfully via SMTP (fallback)');
-        console.log('   To:', email);
-        console.log('   MessageId:', smtpResult.messageId);
-        return; // Success with SMTP fallback
-      } catch (smtpError: any) {
-        console.error('❌ SMTP fallback also failed:', smtpError.message);
-        // If both fail, throw the original SES error with additional context
-        throw new Error(`Failed to send email via SES and SMTP. SES error: ${sesError.message}. SMTP error: ${smtpError.message}`);
-      }
-    } else if (!smtpTransporter) {
-      // No SMTP configured, throw original SES error
-      throw new Error(`Failed to send email via SES: ${sesError.message}. SMTP fallback not configured.`);
-    } else {
-      // SES error is not verification-related, throw it directly
-      throw new Error(`Failed to send email via SES: ${sesError.message}`);
-    }
+    console.log('   From:', FROM_EMAIL);
+    console.log('   MessageId:', smtpResult.messageId);
+  } catch (smtpError: any) {
+    console.error('❌ Error sending email via SMTP:', smtpError.message);
+    console.error('   SMTP Host:', process.env.SMTP_HOST);
+    console.error('   SMTP Port:', process.env.SMTP_PORT || '587');
+    console.error('   SMTP User:', process.env.SMTP_USER);
+    throw new Error(`Failed to send email via SMTP: ${smtpError.message}`);
   }
 }
