@@ -203,6 +203,33 @@ export async function updateUserPassword(
   }
 }
 
+// Reset temporary password for a user (for resending email)
+export async function resetTempPassword(email: string, tempPasswordHash: string): Promise<{ id: string; email: string; name: string }> {
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const result = await query(
+      `UPDATE users 
+       SET temp_password_hash = $1, 
+           requires_password_change = true,
+           password_hash = NULL,
+           updated_at = NOW()
+       WHERE LOWER(email) = $2
+       RETURNING id, email, name`,
+      [tempPasswordHash, normalizedEmail]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    
+    return result.rows[0];
+  } catch (error: any) {
+    console.error('Error resetting temp password:', error);
+    throw error;
+  }
+}
+
 // Start trial when user changes password
 export async function startTrial(userId: string): Promise<void> {
   try {

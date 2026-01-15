@@ -103,6 +103,13 @@ export const authApi = {
     }
   },
 
+  resendEmail: async (email: string) => {
+    return apiRequest<{ message: string; cooldownSeconds?: number; maxAttempts?: number }>("/api/auth/resend-email", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
   changePassword: async (currentPassword: string, newPassword: string) => {
     return apiRequest<{ message: string }>("/api/auth/change-password", {
       method: "POST",
@@ -347,7 +354,6 @@ export const chatRequestsApi = {
   },
 };
 
-
 // Subscriptions API
 export const subscriptionsApi = {
   getStatus: async () => {
@@ -399,5 +405,55 @@ export const subscriptionsApi = {
     return apiRequest<{ message: string }>(`/api/subscriptions/users/${userId}`, {
       method: "DELETE",
     });
+  },
+};
+
+// Calls API
+export const callsApi = {
+  initiateCall: async (chatId: string, callType: 'audio' | 'video', calleeId: string) => {
+    return apiRequest<{ callId: string; roomName: string; callType: 'audio' | 'video' }>("/api/calls/initiate", {
+      method: "POST",
+      body: JSON.stringify({ chatId, callType, calleeId }),
+    });
+  },
+
+  acceptCall: async (callId: string) => {
+    return apiRequest<{ roomName: string; callType: 'audio' | 'video' }>(`/api/calls/${callId}/accept`, {
+      method: "POST",
+    });
+  },
+
+  declineCall: async (callId: string) => {
+    return apiRequest<{ success: boolean }>(`/api/calls/${callId}/decline`, {
+      method: "POST",
+    });
+  },
+
+  endCall: async (callId: string) => {
+    return apiRequest<{ success: boolean }>(`/api/calls/${callId}/end`, {
+      method: "POST",
+    });
+  },
+
+  inviteUserToCall: async (callId: string, userId: string, userName?: string) => {
+    return apiRequest<{ roomName: string; callType: 'audio' | 'video' }>(`/api/calls/${callId}/invite`, {
+      method: "POST",
+      body: JSON.stringify({ userId, userName }),
+    });
+  },
+
+  getCall: async (callId: string) => {
+    return apiRequest<{
+      id: string;
+      chatId: string;
+      roomName: string;
+      callType: 'audio' | 'video';
+      callerId: string;
+      callerName: string;
+      calleeId: string;
+      status: 'pending' | 'accepted' | 'declined' | 'ended';
+      createdAt: string;
+      acceptedAt?: string;
+    }>(`/api/calls/${callId}`);
   },
 };

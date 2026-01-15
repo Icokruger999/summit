@@ -21,6 +21,11 @@ export default function Login() {
   const [accountNotFound, setAccountNotFound] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [signupEmail, setSignupEmail] = useState<string>("");
+  const [resendEmailClicked, setResendEmailClicked] = useState(false);
+  const [resendEmailLoading, setResendEmailLoading] = useState(false);
+  const [resendEmailError, setResendEmailError] = useState<string | null>(null);
+  const [resendEmailSuccess, setResendEmailSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +50,7 @@ export default function Login() {
         }
 
         // Register user (no password needed)
-        await authApi.register(
+        const registerResponse = await authApi.register(
           email.trim(),
           name.trim(),
           jobTitle.trim() === "" || jobTitle.trim().toUpperCase() === "N/A" ? undefined : jobTitle.trim(),
@@ -56,6 +61,10 @@ export default function Login() {
         // Show success message
         setSignupSuccess(true);
         setError(null);
+        setSignupEmail(email.trim()); // Store email for resend functionality
+        setResendEmailClicked(false); // Reset resend state
+        setResendEmailError(null);
+        setResendEmailSuccess(false);
         
         // Clear form
         setName("");
@@ -119,6 +128,39 @@ export default function Login() {
     setAccountNotFound(false);
     setSignupSuccess(false);
     setPassword("");
+    setResendEmailClicked(false);
+    setResendEmailError(null);
+    setResendEmailSuccess(false);
+    setSignupEmail("");
+  };
+
+  const handleResendEmail = async () => {
+    if (resendEmailClicked || resendEmailLoading) {
+      return; // Prevent multiple clicks
+    }
+
+    if (!signupEmail) {
+      setResendEmailError("Email address not found. Please try creating an account again.");
+      return;
+    }
+
+    setResendEmailLoading(true);
+    setResendEmailError(null);
+    setResendEmailSuccess(false);
+
+    try {
+      await authApi.resendEmail(signupEmail);
+      setResendEmailClicked(true); // Mark as clicked - can only click once
+      setResendEmailSuccess(true);
+      setResendEmailError(null);
+    } catch (err: any) {
+      const errorMessage = err.message || err.error || "Failed to resend email. Please try again later.";
+      setResendEmailError(errorMessage);
+      setResendEmailSuccess(false);
+      // Allow retry if there's an error (but still show error message)
+    } finally {
+      setResendEmailLoading(false);
+    }
   };
 
   return (
@@ -145,13 +187,53 @@ export default function Login() {
 
           {/* Success Message (Signup) */}
           {signupSuccess && (
-            <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
-              <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">
-                  Account created successfully! Please check your email for your temporary password.
-                </p>
+            <div className="space-y-3">
+              <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
+                <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    Account created successfully! Please check your email for your temporary password.
+                  </p>
+                </div>
               </div>
+              
+              {/* Resend Email Link */}
+              {!resendEmailClicked && !resendEmailSuccess && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={resendEmailLoading}
+                    className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+                  >
+                    {resendEmailLoading ? "Sending..." : "Didn't receive email? Click here to send again"}
+                  </button>
+                </div>
+              )}
+
+              {/* Resend Success Message */}
+              {resendEmailSuccess && (
+                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
+                  <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      A new temporary password has been sent to your email.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Resend Error Message */}
+              {resendEmailError && (
+                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-red-50 border-red-500 text-red-700">
+                  <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {resendEmailError}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

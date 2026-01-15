@@ -8,7 +8,8 @@ import {
   createUserWithTempPassword,
   updateUserPassword,
   deleteExpiredAccounts,
-  startTrial
+  startTrial,
+  resetTempPassword
 } from "../lib/db.js";
 import { sendTempPasswordEmail } from "../lib/email.js";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
@@ -16,6 +17,22 @@ import { authenticate, AuthRequest } from "../middleware/auth.js";
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+
+// Rate limiting for resend email (in-memory store)
+// Format: { email: { lastResend: timestamp, attempts: number } }
+const resendEmailLimits = new Map<string, { lastResend: number; attempts: number }>();
+const RESEND_COOLDOWN_MS = 60000; // 1 minute cooldown between resends
+const MAX_RESEND_ATTEMPTS = 3; // Max 3 resends per hour per email
+
+// Clean up old entries periodically (older than 1 hour)
+setInterval(() => {
+  const oneHourAgo = Date.now() - 3600000;
+  for (const [email, data] of resendEmailLimits.entries()) {
+    if (data.lastResend < oneHourAgo) {
+      resendEmailLimits.delete(email);
+    }
+  }
+}, 3600000); // Run cleanup every hour
 
 // Generate secure random password
 function generateTempPassword(): string {
@@ -249,6 +266,120 @@ router.get("/me", authenticate, async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error("Error getting user:", error);
     res.status(401).json({ error: "Invalid token" });
+  }
+});
+
+// Resend temporary password email
+router.post("/resend-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Check rate limiting
+    const now = Date.now();
+    const limitData = resendEmailLimits.get(normalizedEmail);
+    
+    if (limitData) {
+      // Check if within cooldown period
+      const timeSinceLastResend = now - limitData.lastResend;
+      if (timeSinceLastResend < RESEND_COOLDOWN_MS) {
+        const secondsRemaining = Math.ceil((RESEND_COOLDOWN_MS - timeSinceLastResend) / 1000);
+        return res.status(429).json({ 
+          error: `Please wait ${secondsRemaining} second${secondsRemaining !== 1 ? 's' : ''} before requesting another email.`,
+          cooldownSeconds: secondsRemaining
+        });
+      }
+
+      // Check if max attempts reached (reset after 1 hour)
+      if (limitData.attempts >= MAX_RESEND_ATTEMPTS) {
+        const oneHourAgo = now - 3600000;
+        if (limitData.lastResend > oneHourAgo) {
+          return res.status(429).json({ 
+            error: "Too many resend requests. Please try again later.",
+            maxAttempts: MAX_RESEND_ATTEMPTS
+          });
+        } else {
+          // Reset attempts if more than 1 hour has passed
+          limitData.attempts = 0;
+        }
+      }
+    }
+
+    // Check if user exists
+    const user = await getUserByEmail(normalizedEmail);
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      // But still apply rate limiting
+      if (!limitData) {
+        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
+      } else {
+        limitData.lastResend = now;
+        limitData.attempts += 1;
+      }
+      
+      // Return success message even if user doesn't exist (security best practice)
+      return res.json({ 
+        message: "If an account exists with this email, a new temporary password has been sent." 
+      });
+    }
+
+    // Check if user has already changed password (no temp password exists)
+    if (!user.temp_password_hash && user.password_hash) {
+      return res.status(400).json({ 
+        error: "Password has already been set. Please use the login page or password reset." 
+      });
+    }
+
+    // Generate new temporary password
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+
+    // Update user's temp password
+    await resetTempPassword(normalizedEmail, tempPasswordHash);
+
+    // Send email
+    try {
+      await sendTempPasswordEmail(normalizedEmail, user.name || "User", tempPassword);
+      console.log(`✅ Resent temp password email to ${normalizedEmail}`);
+      
+      // Update rate limiting
+      if (!limitData) {
+        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
+      } else {
+        limitData.lastResend = now;
+        limitData.attempts += 1;
+      }
+
+      res.json({ 
+        message: "A new temporary password has been sent to your email." 
+      });
+    } catch (emailError: any) {
+      console.error("❌ Failed to resend temp password email:", emailError);
+      // Update rate limiting even on error to prevent abuse
+      if (!limitData) {
+        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
+      } else {
+        limitData.lastResend = now;
+        limitData.attempts += 1;
+      }
+      
+      throw new Error("Failed to send email. Please try again later.");
+    }
+  } catch (error: any) {
+    console.error("Error resending email:", error);
+    res.status(500).json({ error: error.message || "Failed to resend email" });
   }
 });
 
