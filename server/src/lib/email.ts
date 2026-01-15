@@ -1,5 +1,6 @@
-// Email service using AWS SES
+// Email service using AWS SES with SMTP fallback
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -24,8 +25,25 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
 
 const sesClient = new SESClient(sesClientConfig);
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'info@streamyo.net';
-const FROM_NAME = process.env.SES_FROM_NAME || 'Summit';
+// SMTP configuration for fallback
+let smtpTransporter: nodemailer.Transporter | null = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  console.log('✅ SMTP transporter configured as fallback');
+} else {
+  console.log('⚠️  SMTP not configured - only SES will be used');
+}
+
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || 'info@streamyo.net';
+const FROM_NAME = process.env.SES_FROM_NAME || process.env.SMTP_FROM_NAME || 'Summit';
 
 // Beautiful HTML email template for temporary password
 function getTempPasswordEmailTemplate(name: string, tempPassword: string, loginUrl: string): string {
@@ -212,17 +230,19 @@ If you didn't create this account, please ignore this email.
   `.trim();
 }
 
-// Send temporary password email using AWS SES
+// Send temporary password email using AWS SES with SMTP fallback
 export async function sendTempPasswordEmail(
   email: string,
   name: string,
   tempPassword: string
 ): Promise<void> {
-  try {
-    const loginUrl = process.env.FRONTEND_URL || 'https://summit.codingeverest.com/login';
-    const htmlBody = getTempPasswordEmailTemplate(name, tempPassword, loginUrl);
-    const textBody = getTempPasswordEmailText(name, tempPassword, loginUrl);
+  const loginUrl = process.env.FRONTEND_URL || 'https://summit.codingeverest.com/login';
+  const htmlBody = getTempPasswordEmailTemplate(name, tempPassword, loginUrl);
+  const textBody = getTempPasswordEmailText(name, tempPassword, loginUrl);
+  const subject = 'Welcome to Summit - Your Temporary Password';
 
+  // Try AWS SES first
+  try {
     const command = new SendEmailCommand({
       Source: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       Destination: {
@@ -230,7 +250,7 @@ export async function sendTempPasswordEmail(
       },
       Message: {
         Subject: {
-          Data: 'Welcome to Summit - Your Temporary Password',
+          Data: subject,
           Charset: 'UTF-8',
         },
         Body: {
@@ -249,8 +269,43 @@ export async function sendTempPasswordEmail(
     const result = await sesClient.send(command);
     console.log('✅ Temp password email sent successfully via AWS SES:', result.MessageId);
     console.log('   To:', email);
-  } catch (error: any) {
-    console.error('❌ Error sending temp password email via AWS SES:', error);
-    throw new Error(`Failed to send email: ${error.message}`);
+    return; // Success, exit early
+  } catch (sesError: any) {
+    console.warn('⚠️  AWS SES failed, attempting SMTP fallback...', sesError.message);
+    
+    // Check if SES error is due to verification or permissions
+    const isSESVerificationError = 
+      sesError.Code === 'MessageRejected' ||
+      sesError.Code === 'AccessDenied' ||
+      sesError.message?.includes('not verified') ||
+      sesError.message?.includes('not authorized');
+
+    // Only fallback to SMTP if SMTP is configured and SES failed due to verification/permissions
+    if (isSESVerificationError && smtpTransporter) {
+      try {
+        const smtpResult = await smtpTransporter.sendMail({
+          from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+          to: email,
+          subject: subject,
+          html: htmlBody,
+          text: textBody,
+        });
+
+        console.log('✅ Temp password email sent successfully via SMTP (fallback)');
+        console.log('   To:', email);
+        console.log('   MessageId:', smtpResult.messageId);
+        return; // Success with SMTP fallback
+      } catch (smtpError: any) {
+        console.error('❌ SMTP fallback also failed:', smtpError.message);
+        // If both fail, throw the original SES error with additional context
+        throw new Error(`Failed to send email via SES and SMTP. SES error: ${sesError.message}. SMTP error: ${smtpError.message}`);
+      }
+    } else if (!smtpTransporter) {
+      // No SMTP configured, throw original SES error
+      throw new Error(`Failed to send email via SES: ${sesError.message}. SMTP fallback not configured.`);
+    } else {
+      // SES error is not verification-related, throw it directly
+      throw new Error(`Failed to send email via SES: ${sesError.message}`);
+    }
   }
 }
