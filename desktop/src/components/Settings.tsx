@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon, Mic, Video, Bell, Monitor, LogOut, ArrowLeft, Volume2, Briefcase, Phone, Check, X, AlertCircle, User, Moon, Sun, Edit2, Save, XCircle, Download, MonitorSpeaker } from "lucide-react";
+import { Settings as SettingsIcon, Mic, Video, Bell, Monitor, LogOut, ArrowLeft, Volume2, Briefcase, Phone, Check, X, AlertCircle, User, Moon, Sun, Edit2, Save, XCircle, Download, MonitorSpeaker, CreditCard } from "lucide-react";
 import { authApi, usersApi } from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import SubscriptionManagement from "./Subscription/SubscriptionManagement";
+import SubscriptionModal from "./Subscription/SubscriptionModal";
 
 interface SettingsProps {
   user: any;
   onSignOut: () => void;
 }
 
-type TabType = "audio" | "profile" | "appearance" | "notifications" | "permissions";
+type TabType = "audio" | "profile" | "appearance" | "notifications" | "permissions" | "subscription";
 
 export default function Settings({ user, onSignOut }: SettingsProps) {
   const navigate = useNavigate();
@@ -338,6 +340,7 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
     { id: "appearance" as TabType, label: "Appearance", icon: Monitor },
     { id: "notifications" as TabType, label: "Notifications", icon: Bell },
     { id: "permissions" as TabType, label: "Permissions", icon: AlertCircle },
+    { id: "subscription" as TabType, label: "Subscription", icon: CreditCard },
   ];
 
   return (
@@ -1017,6 +1020,22 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
                     </p>
                   </div>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* Subscription Tab */}
+          {activeTab === "subscription" && (
+            <section className="space-y-6">
+              <div className="glass-card rounded-2xl p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                  Subscription Management
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  Manage your subscription and team members (for Pack subscriptions).
+                </p>
+                <SubscriptionManagement userId={user?.id || ""} />
               </div>
             </section>
           )}

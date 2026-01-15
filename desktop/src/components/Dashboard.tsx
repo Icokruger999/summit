@@ -18,6 +18,9 @@ import { useContacts } from "../hooks/useContacts";
 import { useBackgroundChatConnections } from "../hooks/useBackgroundChatConnections";
 import { usePreload } from "../hooks/usePreload";
 import { useMessageWebSocket } from "../hooks/useMessageWebSocket";
+import SubscriptionLockScreen from "./Subscription/SubscriptionLockScreen";
+import TrialBanner from "./Subscription/TrialBanner";
+import SubscriptionModal from "./Subscription/SubscriptionModal";
 
 interface DashboardProps {
   user: any;
@@ -42,6 +45,7 @@ export default function Dashboard({ user }: DashboardProps) {
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "info" | "warning" | "error" } | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   
   // Track user presence
   const { updateStatus } = useUpdatePresence();
@@ -164,9 +168,78 @@ export default function Dashboard({ user }: DashboardProps) {
   // Get current status (default to online if not set)
   const currentStatus = presence?.status || "online";
 
+  // Handle chat request accepted notification
+  const handleChatRequestAccepted = (data: any) => {
+    const requesteeName = data.requesteeName || "Someone";
+    const message = `${requesteeName} accepted your chat request`;
+    
+    setNotification({
+      message,
+      type: "success",
+    });
+    
+    // Play notification sound
+    const notificationsEnabled = localStorage.getItem("notificationsEnabled") !== "false";
+    if (notificationsEnabled) {
+      try {
+        sounds.notification();
+      } catch (e) {
+        // Silently handle sound errors
+      }
+    }
+    
+    // Show desktop notification if app is not focused
+    if (document.hidden) {
+      const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+      
+      if (isTauri) {
+        import("@tauri-apps/plugin-notification").then(({ sendNotification }) => {
+          return sendNotification({
+            title: "Chat Request Accepted",
+            body: message,
+          });
+        }).catch(() => {});
+      } else if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Chat Request Accepted", {
+          body: message,
+          icon: new URL("../assets/icon.png", import.meta.url).href,
+        });
+      }
+    }
+    
+    // Refresh chat requests to update the UI
+    window.dispatchEvent(new CustomEvent('refreshChatRequests'));
+  };
+  
+  // Handle chat request declined notification
+  const handleChatRequestDeclined = (data: any) => {
+    const requesteeName = data.requesteeName || "Someone";
+    const message = `${requesteeName} declined your chat request`;
+    
+    setNotification({
+      message,
+      type: "info",
+    });
+    
+    // Play notification sound (softer for declined)
+    const notificationsEnabled = localStorage.getItem("notificationsEnabled") !== "false";
+    if (notificationsEnabled) {
+      try {
+        sounds.notification();
+      } catch (e) {
+        // Silently handle sound errors
+      }
+    }
+    
+    // Refresh chat requests to update the UI
+    window.dispatchEvent(new CustomEvent('refreshChatRequests'));
+  };
+
   // Global WebSocket connection for real-time message notifications
   useMessageWebSocket({
     userId: user?.id || null,
+    onChatRequestAccepted: handleChatRequestAccepted,
+    onChatRequestDeclined: handleChatRequestDeclined,
     onNewMessage: (notification: any) => {
       console.log("📨 Global WebSocket received message:", notification);
       
@@ -534,6 +607,9 @@ export default function Dashboard({ user }: DashboardProps) {
 
   return (
     <>
+      {/* Subscription Lock Screen - blocks all access if trial expired */}
+      <SubscriptionLockScreen userId={user?.id || ""} />
+      
       {notification && (
         <NotificationToast
           message={notification.message}
@@ -542,7 +618,24 @@ export default function Dashboard({ user }: DashboardProps) {
           onClose={() => setNotification(null)}
         />
       )}
+      
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSubscriptionSelected={() => {
+          // Refresh page after subscription selected
+          window.location.reload();
+        }}
+      />
+      
       <div className="h-screen flex flex-col bg-white">
+      
+      {/* Trial Banner - shows hours remaining */}
+      <TrialBanner 
+        userId={user?.id || ""} 
+        onSelectPlan={() => setShowSubscriptionModal(true)}
+      />
       
       {/* Header */}
       <header className="glass-frosty shadow-sm border-b border-white/50">

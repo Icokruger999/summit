@@ -74,18 +74,36 @@ export interface User {
   phone?: string;
   created_at?: Date;
   updated_at?: Date;
+  subscription_id?: string;
+  trial_started_at?: Date;
+  subscription_status?: 'trial' | 'active' | 'expired' | 'locked';
 }
 
-// Get user by email
+export interface Subscription {
+  id: string;
+  owner_id: string;
+  tier: 'basic' | 'pack' | 'enterprise';
+  status: 'active' | 'expired' | 'cancelled';
+  max_users: number;
+  created_at: Date;
+  expires_at?: Date;
+  payment_reference?: string;
+}
+
+// Get user by email (case-insensitive)
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = email.toLowerCase().trim();
+    
     const result = await query(
       `SELECT id, email, name, avatar_url, password_hash, temp_password_hash, 
               requires_password_change, account_created_at, created_at, 
-              company, job_title, phone, updated_at
+              company, job_title, phone, updated_at, subscription_id, 
+              trial_started_at, subscription_status
        FROM users 
-       WHERE email = $1`,
-      [email]
+       WHERE LOWER(email) = $1`,
+      [normalizedEmail]
     );
     
     if (result.rows.length === 0) {
@@ -105,7 +123,8 @@ export async function getUserById(id: string): Promise<User | null> {
     const result = await query(
       `SELECT id, email, name, avatar_url, password_hash, temp_password_hash, 
               requires_password_change, account_created_at, created_at, 
-              company, job_title, phone, updated_at
+              company, job_title, phone, updated_at, subscription_id, 
+              trial_started_at, subscription_status
        FROM users 
        WHERE id = $1`,
       [id]
@@ -132,6 +151,9 @@ export async function createUserWithTempPassword(
   company?: string
 ): Promise<User> {
   try {
+    // Normalize email to lowercase for case-insensitive storage
+    const normalizedEmail = email.toLowerCase().trim();
+    
     // Normalize optional fields - allow "N/A" as valid input
     const normalizedJobTitle = (!jobTitle || jobTitle.trim() === '' || jobTitle.trim().toUpperCase() === 'N/A') 
       ? null 
@@ -150,7 +172,7 @@ export async function createUserWithTempPassword(
        RETURNING id, email, name, avatar_url, password_hash, temp_password_hash, 
                  requires_password_change, account_created_at, created_at, 
                  company, job_title, phone, updated_at`,
-      [email, name, tempPasswordHash, normalizedJobTitle, normalizedPhone, normalizedCompany]
+      [normalizedEmail, name, tempPasswordHash, normalizedJobTitle, normalizedPhone, normalizedCompany]
     );
     
     return result.rows[0] as User;
@@ -177,6 +199,316 @@ export async function updateUserPassword(
     );
   } catch (error: any) {
     console.error('Error updating user password:', error);
+    throw error;
+  }
+}
+
+// Start trial when user changes password
+export async function startTrial(userId: string): Promise<void> {
+  try {
+    await query(
+      `UPDATE users 
+       SET trial_started_at = NOW(),
+           subscription_status = 'trial'
+       WHERE id = $1 AND trial_started_at IS NULL`,
+      [userId]
+    );
+    console.log(`✅ Trial started for user ${userId}`);
+  } catch (error: any) {
+    console.error('Error starting trial:', error);
+    throw error;
+  }
+}
+
+// Get subscription status for user
+export interface SubscriptionStatus {
+  status: 'trial' | 'active' | 'expired' | 'locked';
+  trial_started_at?: Date;
+  hours_remaining?: number;
+  subscription?: Subscription;
+  is_owner?: boolean;
+  current_users?: number;
+  max_users?: number;
+}
+
+export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
+  try {
+    const userResult = await query(
+      `SELECT subscription_id, trial_started_at, subscription_status
+       FROM users 
+       WHERE id = $1`,
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    
+    const user = userResult.rows[0];
+    const status = user.subscription_status || 'trial';
+    
+    // If user has a subscription, get subscription details
+    if (user.subscription_id) {
+      const subResult = await query(
+        `SELECT s.*, 
+                (SELECT COUNT(*) FROM users WHERE subscription_id = s.id) as current_users
+         FROM subscriptions s
+         WHERE s.id = $1`,
+        [user.subscription_id]
+      );
+      
+      if (subResult.rows.length > 0) {
+        const sub = subResult.rows[0];
+        return {
+          status: sub.status === 'active' ? 'active' : 'expired',
+          subscription: {
+            id: sub.id,
+            owner_id: sub.owner_id,
+            tier: sub.tier,
+            status: sub.status,
+            max_users: sub.max_users,
+            created_at: sub.created_at,
+            expires_at: sub.expires_at,
+            payment_reference: sub.payment_reference,
+          },
+          is_owner: sub.owner_id === userId,
+          current_users: parseInt(sub.current_users) || 0,
+          max_users: sub.max_users,
+        };
+      }
+    }
+    
+    // Calculate trial hours remaining
+    let hours_remaining: number | undefined;
+    if (user.trial_started_at && status === 'trial') {
+      const trialResult = await query(
+        `SELECT EXTRACT(EPOCH FROM (NOW() - trial_started_at)) / 3600 as hours_elapsed
+         FROM users
+         WHERE id = $1`,
+        [userId]
+      );
+      
+      const hoursElapsed = parseFloat(trialResult.rows[0].hours_elapsed) || 0;
+      hours_remaining = Math.max(0, 72 - hoursElapsed);
+      
+      // If trial expired, update status
+      if (hours_remaining <= 0) {
+        await query(
+          `UPDATE users SET subscription_status = 'locked' WHERE id = $1`,
+          [userId]
+        );
+        return {
+          status: 'locked',
+          trial_started_at: user.trial_started_at,
+          hours_remaining: 0,
+        };
+      }
+    }
+    
+    return {
+      status: status as 'trial' | 'active' | 'expired' | 'locked',
+      trial_started_at: user.trial_started_at,
+      hours_remaining,
+    };
+  } catch (error: any) {
+    console.error('Error getting subscription status:', error);
+    throw error;
+  }
+}
+
+// Check if trial has expired
+export async function checkTrialExpired(userId: string): Promise<boolean> {
+  try {
+    const result = await query(
+      `SELECT 
+        CASE 
+          WHEN trial_started_at IS NULL THEN false
+          WHEN NOW() >= trial_started_at + INTERVAL '72 hours' THEN true
+          ELSE false
+        END as expired,
+        subscription_status
+       FROM users 
+       WHERE id = $1`,
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return true; // User not found, consider expired
+    }
+    
+    const row = result.rows[0];
+    
+    // If already locked or expired, return true
+    if (row.subscription_status === 'locked' || row.subscription_status === 'expired') {
+      return true;
+    }
+    
+    // If trial expired, update status
+    if (row.expired && row.subscription_status === 'trial') {
+      await query(
+        `UPDATE users SET subscription_status = 'locked' WHERE id = $1`,
+        [userId]
+      );
+      return true;
+    }
+    
+    return row.expired;
+  } catch (error: any) {
+    console.error('Error checking trial expiration:', error);
+    return true; // On error, assume expired for safety
+  }
+}
+
+// Create subscription
+export async function createSubscription(
+  ownerId: string,
+  tier: 'basic' | 'pack' | 'enterprise'
+): Promise<Subscription> {
+  try {
+    const maxUsers = tier === 'basic' ? 1 : tier === 'pack' ? 5 : -1; // -1 for enterprise (unlimited)
+    
+    const result = await query(
+      `INSERT INTO subscriptions (owner_id, tier, status, max_users)
+       VALUES ($1, $2, 'active', $3)
+       RETURNING *`,
+      [ownerId, tier, maxUsers]
+    );
+    
+    const sub = result.rows[0];
+    
+    // Link owner to subscription
+    await query(
+      `UPDATE users 
+       SET subscription_id = $1, 
+           subscription_status = 'active'
+       WHERE id = $2`,
+      [sub.id, ownerId]
+    );
+    
+    return {
+      id: sub.id,
+      owner_id: sub.owner_id,
+      tier: sub.tier,
+      status: sub.status,
+      max_users: sub.max_users,
+      created_at: sub.created_at,
+      expires_at: sub.expires_at,
+      payment_reference: sub.payment_reference,
+    };
+  } catch (error: any) {
+    console.error('Error creating subscription:', error);
+    throw error;
+  }
+}
+
+// Add user to subscription (for pack subscriptions)
+export async function addUserToSubscription(
+  subscriptionId: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Check subscription exists and has space
+    const subResult = await query(
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM users WHERE subscription_id = s.id) as current_users
+       FROM subscriptions s
+       WHERE s.id = $1 AND s.status = 'active'`,
+      [subscriptionId]
+    );
+    
+    if (subResult.rows.length === 0) {
+      throw new Error('Subscription not found or inactive');
+    }
+    
+    const sub = subResult.rows[0];
+    const currentUsers = parseInt(sub.current_users) || 0;
+    
+    // Check if user limit reached (skip check for enterprise with max_users = -1)
+    if (sub.max_users > 0 && currentUsers >= sub.max_users) {
+      throw new Error(`Subscription limit reached (${sub.max_users} users)`);
+    }
+    
+    // Check if user already in a subscription
+    const userCheck = await query(
+      `SELECT subscription_id FROM users WHERE id = $1`,
+      [userId]
+    );
+    
+    if (userCheck.rows.length > 0 && userCheck.rows[0].subscription_id) {
+      throw new Error('User is already part of a subscription');
+    }
+    
+    // Add user to subscription
+    await query(
+      `UPDATE users 
+       SET subscription_id = $1, 
+           subscription_status = 'active'
+       WHERE id = $2`,
+      [subscriptionId, userId]
+    );
+    
+    console.log(`✅ Added user ${userId} to subscription ${subscriptionId}`);
+  } catch (error: any) {
+    console.error('Error adding user to subscription:', error);
+    throw error;
+  }
+}
+
+// Remove user from subscription
+export async function removeUserFromSubscription(
+  subscriptionId: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Don't allow removing the owner
+    const ownerCheck = await query(
+      `SELECT owner_id FROM subscriptions WHERE id = $1`,
+      [subscriptionId]
+    );
+    
+    if (ownerCheck.rows.length > 0 && ownerCheck.rows[0].owner_id === userId) {
+      throw new Error('Cannot remove subscription owner');
+    }
+    
+    // Remove user from subscription
+    await query(
+      `UPDATE users 
+       SET subscription_id = NULL, 
+           subscription_status = 'locked'
+       WHERE id = $1 AND subscription_id = $2`,
+      [userId, subscriptionId]
+    );
+    
+    console.log(`✅ Removed user ${userId} from subscription ${subscriptionId}`);
+  } catch (error: any) {
+    console.error('Error removing user from subscription:', error);
+    throw error;
+  }
+}
+
+// Get all users in a subscription
+export async function getSubscriptionUsers(subscriptionId: string): Promise<User[]> {
+  try {
+    const result = await query(
+      `SELECT id, email, name, avatar_url, company, job_title, phone, created_at
+       FROM users 
+       WHERE subscription_id = $1
+       ORDER BY created_at ASC`,
+      [subscriptionId]
+    );
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      avatar_url: row.avatar_url,
+      company: row.company,
+      job_title: row.job_title,
+      phone: row.phone,
+      created_at: row.created_at,
+    }));
+  } catch (error: any) {
+    console.error('Error getting subscription users:', error);
     throw error;
   }
 }

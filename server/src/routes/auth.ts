@@ -7,7 +7,8 @@ import {
   getUserById, 
   createUserWithTempPassword,
   updateUserPassword,
-  deleteExpiredAccounts
+  deleteExpiredAccounts,
+  startTrial
 } from "../lib/db.js";
 import { sendTempPasswordEmail } from "../lib/email.js";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
@@ -38,14 +39,17 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Email and name are required" });
     }
 
+    // Normalize email to lowercase for case-insensitive handling
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Check if user already exists
-    const existingUser = await getUserByEmail(email);
+    // Check if user already exists (case-insensitive)
+    const existingUser = await getUserByEmail(normalizedEmail);
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -54,9 +58,9 @@ router.post("/register", async (req, res) => {
     const tempPassword = generateTempPassword();
     const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
 
-    // Create user with temp password
+    // Create user with temp password (email is normalized inside createUserWithTempPassword)
     const user = await createUserWithTempPassword(
-      email,
+      normalizedEmail,
       name,
       tempPasswordHash,
       job_title,
@@ -64,10 +68,10 @@ router.post("/register", async (req, res) => {
       company
     );
 
-    // Send temp password email
+    // Send temp password email (use normalized email)
     try {
-      await sendTempPasswordEmail(email, name, tempPassword);
-      console.log(`✅ Temp password email sent to ${email}`);
+      await sendTempPasswordEmail(normalizedEmail, name, tempPassword);
+      console.log(`✅ Temp password email sent to ${normalizedEmail}`);
     } catch (emailError: any) {
       console.error("❌ Failed to send temp password email:", emailError);
       // Don't fail registration if email fails - user can request password reset
@@ -94,8 +98,11 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Get user by email
-    const user = await getUserByEmail(email);
+    // Normalize email to lowercase for case-insensitive login
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Get user by email (case-insensitive lookup)
+    const user = await getUserByEmail(normalizedEmail);
     if (!user) {
       return res.status(404).json({ error: "Account not found" });
     }
@@ -200,8 +207,15 @@ router.post("/change-password", authenticate, async (req: AuthRequest, res) => {
     // Update password
     await updateUserPassword(userId, newPasswordHash);
 
+    // Start trial if this is the first password change (from temp password)
+    if (user.requires_password_change && !user.trial_started_at) {
+      await startTrial(userId);
+      console.log(`✅ Trial started for user ${userId}`);
+    }
+
     res.json({
       message: "Password changed successfully",
+      trialStarted: user.requires_password_change && !user.trial_started_at,
     });
   } catch (error: any) {
     console.error("Error changing password:", error);

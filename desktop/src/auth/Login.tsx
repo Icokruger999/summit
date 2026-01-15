@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { authApi } from "../lib/api";
-import { Mail, Lock, LogIn, UserPlus, Briefcase, Phone, AlertTriangle } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus, Briefcase, Phone, AlertTriangle, Info, CreditCard } from "lucide-react";
 import logoImage from "../assets/logo.png";
+import SubscriptionModal from "../components/Subscription/SubscriptionModal";
 
 export default function Login() {
   // Login state
@@ -19,6 +20,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [accountNotFound, setAccountNotFound] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +122,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-sky-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-2xl">
         {/* Main Card */}
         <div className="glass-frosty rounded-2xl shadow-2xl p-8 space-y-8">
           {/* Header */}
@@ -173,6 +175,26 @@ export default function Login() {
                     Create Account
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Trial Info Box (Signup) */}
+          {isSignUp && !signupSuccess && (
+            <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-blue-50 border-blue-500 text-blue-700">
+              <Info className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium mb-2">
+                  New accounts get a 3-day trial. After that, you'll need a paid subscription to continue using Summit.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="mt-2 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  View Subscriptions
+                </button>
               </div>
             </div>
           )}
@@ -234,41 +256,42 @@ export default function Login() {
               </div>
             )}
 
-            {/* Job Title Field (Sign Up Only - Optional) */}
+            {/* Two-column layout for optional fields on signup */}
             {isSignUp && (
-              <div className="space-y-2">
-                <label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-blue-500" />
-                  Job Title / Role
-                </label>
-                <input
-                  id="jobTitle"
-                  name="jobTitle"
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                  placeholder="N/A (optional)"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                />
-              </div>
-            )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Job Title Field (Sign Up Only - Optional) */}
+                <div className="space-y-2">
+                  <label htmlFor="jobTitle" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-blue-500" />
+                    Job Title / Role
+                  </label>
+                  <input
+                    id="jobTitle"
+                    name="jobTitle"
+                    type="text"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                    placeholder="N/A (optional)"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                  />
+                </div>
 
-            {/* Phone Field (Sign Up Only - Optional) */}
-            {isSignUp && (
-              <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-blue-500" />
-                  Cell / Phone Number
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                  placeholder="N/A (optional)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                {/* Phone Field (Sign Up Only - Optional) */}
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-blue-500" />
+                    Cell / Phone Number
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                    placeholder="N/A (optional)"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
@@ -375,6 +398,13 @@ export default function Login() {
           by Coding Everest • Powered by LiveKit
         </p>
       </div>
+
+      {/* Subscription Modal (View Only) */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        viewOnly={true}
+      />
     </div>
   );
 }

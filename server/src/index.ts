@@ -13,6 +13,7 @@ import messagesRoutes from "./routes/messages.js";
 import chatRequestsRoutes from "./routes/chatRequests.js";
 import chatsRoutes from "./routes/chats.js";
 import summitRoutes from "./routes/summit.js";
+import subscriptionsRoutes from "./routes/subscriptions.js";
 import { messageNotifier } from "./lib/messageNotifier.js";
 import jwt from "jsonwebtoken";
 
@@ -150,16 +151,19 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Routes
+import { checkSubscriptionAccess } from "./middleware/subscription.js";
 app.use("/api/auth", authRoutes);
-app.use("/api/meetings", meetingsRoutes);
-app.use("/api/users", usersRoutes);
-app.use("/api/livekit", livekitRoutes);
-app.use("/api/files", filesRoutes);
-app.use("/api/presence", presenceRoutes);
-app.use("/api/messages", messagesRoutes);
-app.use("/api/chat-requests", chatRequestsRoutes);
-app.use("/api/chats", chatsRoutes);
-app.use("/api/summit", summitRoutes);
+app.use("/api/subscriptions", subscriptionsRoutes);
+// All other routes require subscription check (except auth and subscriptions)
+app.use("/api/meetings", checkSubscriptionAccess, meetingsRoutes);
+app.use("/api/users", checkSubscriptionAccess, usersRoutes);
+app.use("/api/livekit", checkSubscriptionAccess, livekitRoutes);
+app.use("/api/files", checkSubscriptionAccess, filesRoutes);
+app.use("/api/presence", checkSubscriptionAccess, presenceRoutes);
+app.use("/api/messages", checkSubscriptionAccess, messagesRoutes);
+app.use("/api/chat-requests", checkSubscriptionAccess, chatRequestsRoutes);
+app.use("/api/chats", checkSubscriptionAccess, chatsRoutes);
+app.use("/api/summit", checkSubscriptionAccess, summitRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
