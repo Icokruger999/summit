@@ -110,11 +110,7 @@ export default function SubscriptionModal({
                   <span>Full feature access</span>
                 </li>
               </ul>
-              {viewOnly ? (
-                <div className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-lg font-semibold text-center">
-                  View Only
-                </div>
-              ) : (
+              {!viewOnly && (
                 <button
                   onClick={() => handleSelectPlan('basic')}
                   disabled={loading}
@@ -162,11 +158,7 @@ export default function SubscriptionModal({
                   <span>Manage team members</span>
                 </li>
               </ul>
-              {viewOnly ? (
-                <div className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-lg font-semibold text-center">
-                  View Only
-                </div>
-              ) : (
+              {!viewOnly && (
                 <button
                   onClick={() => handleSelectPlan('pack')}
                   disabled={loading}
@@ -210,12 +202,7 @@ export default function SubscriptionModal({
                   <span>Priority support</span>
                 </li>
               </ul>
-              {viewOnly ? (
-                <div className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-lg font-semibold text-center flex items-center justify-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Contact Us (View Only)
-                </div>
-              ) : (
+              {!viewOnly && (
                 <button
                   onClick={handleEnterpriseContact}
                   disabled={loading}
