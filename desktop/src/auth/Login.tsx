@@ -122,10 +122,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-sky-50 p-4 overflow-y-auto">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
-      <div className="relative w-full max-w-2xl">
+      <div className="relative w-full max-w-2xl my-8">
         {/* Main Card */}
         <div className="glass-frosty rounded-2xl shadow-2xl p-8 space-y-8">
           {/* Header */}
