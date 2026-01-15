@@ -11,7 +11,7 @@ module.exports = {
       // Auto-restart configuration
       autorestart: true,
       watch: false, // Don't watch files in production
-      max_memory_restart: '512M', // Reduced to prevent OOM kills on smaller instances
+      max_memory_restart: '1.5G', // t3.small has 2GB RAM, leaving 500MB for OS
       // Error handling
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',

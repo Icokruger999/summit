@@ -2,7 +2,7 @@
 
 ## Current Configuration
 
-The server is configured with PM2 `max_memory_restart: '512M'` to prevent out-of-memory (OOM) kills on smaller EC2 instances.
+The server is configured with PM2 `max_memory_restart: '1.5G'` for t3.small instance (2GB RAM total).
 
 ## Memory Usage Analysis
 
