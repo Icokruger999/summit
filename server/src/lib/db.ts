@@ -181,6 +181,12 @@ export async function createUserWithTempPassword(
     return result.rows[0] as User;
   } catch (error: any) {
     console.error('Error creating user with temp password:', error);
+    // Check if it's a unique constraint violation (duplicate email)
+    if (error.code === '23505' || error.constraint === 'idx_users_email_lower' || error.constraint === 'users_email_key' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+      const duplicateError: any = new Error('User already exists');
+      duplicateError.code = 'DUPLICATE_USER';
+      throw duplicateError;
+    }
     throw error;
   }
 }

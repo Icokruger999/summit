@@ -136,6 +136,41 @@ router.post("/register", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error registering user:", error);
+    
+    // Handle duplicate user error (should not happen if check above works, but handle it anyway)
+    if (error.code === 'DUPLICATE_USER' || error.message?.includes('already exists') || error.message?.includes('duplicate')) {
+      // Try to get existing user and handle based on their status
+      const existingUser = await getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        // Check if user has already changed password (has permanent password)
+        if (existingUser.password_hash && !existingUser.temp_password_hash) {
+          return res.status(400).json({ 
+            error: "ACCOUNT_VERIFIED",
+            message: "You have already verified your account. Please log in with your email and the password you chose."
+          });
+        }
+        
+        // User exists but hasn't changed password yet - resend temp password
+        const tempPassword = generateTempPassword();
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        await resetTempPassword(normalizedEmail, tempPasswordHash);
+        
+        try {
+          await sendTempPasswordEmail(normalizedEmail, existingUser.name || name, tempPassword);
+          return res.status(200).json({ 
+            message: "An account with this email already exists. We've sent a new temporary password to your email. Please check your inbox.",
+            email: normalizedEmail,
+            accountExists: true
+          });
+        } catch (emailError: any) {
+          return res.status(500).json({ 
+            error: "Failed to send email. Please try again later or use the resend email option.",
+            email: normalizedEmail
+          });
+        }
+      }
+    }
+    
     res.status(500).json({ error: error.message || "Failed to create account" });
   }
 });

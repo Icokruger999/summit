@@ -124,15 +124,15 @@ export default function Login() {
         if (errorCode === "ACCOUNT_VERIFIED") {
           // User has already verified their account (has permanent password)
           setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
+        } else if (errorCode === "User already exists" || errorMessage.toLowerCase().includes("user already exists") || errorMessage.toLowerCase().includes("already exists")) {
+          // Handle "User already exists" error - show resend option
+          setSignupEmail(email.trim());
+          setResendEmailClicked(false);
+          setResendEmailError(null);
+          setResendEmailSuccess(false);
+          setError("An account with this email already exists. Did you receive your temporary password?");
         } else {
-          // For other errors (including 400), show the actual error
-          // But also show resend option if it's an account exists error
-          if (errorCode === "ACCOUNT_EXISTS_TEMP_PASSWORD" || errorMessage.toLowerCase().includes("account exists") || errorMessage.toLowerCase().includes("already exists")) {
-            setSignupEmail(email.trim());
-            setResendEmailClicked(false);
-            setResendEmailError(null);
-            setResendEmailSuccess(false);
-          }
+          // For other errors, show the actual error
           setError(errorMessage);
         }
       }
