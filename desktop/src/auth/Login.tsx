@@ -220,19 +220,17 @@ export default function Login() {
                 </div>
               </div>
               
-              {/* Resend Email Link - Always show if not already successfully resent */}
-              {!resendEmailSuccess && (
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={handleResendEmail}
-                    disabled={resendEmailLoading || resendEmailClicked}
-                    className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
-                  >
-                    {resendEmailLoading ? "Sending..." : resendEmailClicked ? "Email sent" : "Didn't receive email? Click here to send again"}
-                  </button>
-                </div>
-              )}
+              {/* Resend Email Link - Always show (can be clicked multiple times) */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={resendEmailLoading}
+                  className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+                >
+                  {resendEmailLoading ? "Sending..." : "Didn't receive email? Click here to send again"}
+                </button>
+              </div>
 
               {/* Resend Success Message */}
               {resendEmailSuccess && (
