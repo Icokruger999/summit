@@ -58,7 +58,7 @@ export default function Login() {
           company.trim() === "" || company.trim().toUpperCase() === "N/A" ? undefined : company.trim()
         );
 
-        // Show success message
+        // Show success message (works for both new accounts and existing accounts with temp password)
         setSignupSuccess(true);
         setError(null);
         setSignupEmail(email.trim()); // Store email for resend functionality
@@ -118,16 +118,24 @@ export default function Login() {
         const errorData = err.errorData || {};
         const errorCode = errorData.error;
         
-        if (errorCode === "ACCOUNT_VERIFIED") {
-          // User has already verified their account (has permanent password)
-          setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
-        } else if (errorCode === "ACCOUNT_EXISTS_TEMP_PASSWORD") {
-          // User exists but hasn't changed password yet
-          setError(errorData.message || "An account with this email already exists. Did you receive your temporary password?");
-          setSignupEmail(email.trim()); // Store email for resend functionality
-          setResendEmailClicked(false); // Allow resend
+        // Check if it's a success response with accountExists flag (new temp password sent)
+        if (errorCode === undefined && errorData.message && errorData.accountExists) {
+          // Account exists, new temp password was sent
+          setSignupSuccess(true);
+          setError(null);
+          setSignupEmail(email.trim());
+          setResendEmailClicked(false);
           setResendEmailError(null);
           setResendEmailSuccess(false);
+          // Clear form
+          setName("");
+          setEmail("");
+          setJobTitle("N/A");
+          setPhone("N/A");
+          setCompany("N/A");
+        } else if (errorCode === "ACCOUNT_VERIFIED") {
+          // User has already verified their account (has permanent password)
+          setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
         } else {
           // For other errors, show the actual error
           setError(errorMessage);

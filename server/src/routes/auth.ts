@@ -77,10 +77,31 @@ router.post("/register", async (req, res) => {
       }
       
       // User exists but hasn't changed password yet (still has temp password)
-      return res.status(400).json({ 
-        error: "ACCOUNT_EXISTS_TEMP_PASSWORD",
-        message: "An account with this email already exists. Did you receive your temporary password?",
-        email: normalizedEmail
+      // Automatically generate new temporary password and send it
+      const tempPassword = generateTempPassword();
+      const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+      
+      // Update user's temp password
+      await resetTempPassword(normalizedEmail, tempPasswordHash);
+      
+      // Send temp password email
+      try {
+        await sendTempPasswordEmail(normalizedEmail, existingUser.name || name, tempPassword);
+        console.log(`✅ Resent temp password email to ${normalizedEmail} (account already exists with temp password)`);
+      } catch (emailError: any) {
+        console.error("❌ Failed to send temp password email:", emailError);
+        // Return error if email fails
+        return res.status(500).json({ 
+          error: "Failed to send email. Please try again later or use the resend email option.",
+          email: normalizedEmail
+        });
+      }
+      
+      // Return success - new temp password sent
+      return res.status(200).json({ 
+        message: "An account with this email already exists. We've sent a new temporary password to your email. Please check your inbox.",
+        email: normalizedEmail,
+        accountExists: true
       });
     }
 
