@@ -118,26 +118,21 @@ export default function Login() {
         const errorData = err.errorData || {};
         const errorCode = errorData.error;
         
-        // Check if it's a success response with accountExists flag (new temp password sent)
-        if (errorCode === undefined && errorData.message && errorData.accountExists) {
-          // Account exists, new temp password was sent
-          setSignupSuccess(true);
-          setError(null);
-          setSignupEmail(email.trim());
-          setResendEmailClicked(false);
-          setResendEmailError(null);
-          setResendEmailSuccess(false);
-          // Clear form
-          setName("");
-          setEmail("");
-          setJobTitle("N/A");
-          setPhone("N/A");
-          setCompany("N/A");
-        } else if (errorCode === "ACCOUNT_VERIFIED") {
+        // Log the error for debugging
+        console.log("Signup error:", { statusCode, errorCode, errorData, errorMessage });
+        
+        if (errorCode === "ACCOUNT_VERIFIED") {
           // User has already verified their account (has permanent password)
           setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
         } else {
-          // For other errors, show the actual error
+          // For other errors (including 400), show the actual error
+          // But also show resend option if it's an account exists error
+          if (errorCode === "ACCOUNT_EXISTS_TEMP_PASSWORD" || errorMessage.toLowerCase().includes("account exists") || errorMessage.toLowerCase().includes("already exists")) {
+            setSignupEmail(email.trim());
+            setResendEmailClicked(false);
+            setResendEmailError(null);
+            setResendEmailSuccess(false);
+          }
           setError(errorMessage);
         }
       }
@@ -159,8 +154,8 @@ export default function Login() {
   };
 
   const handleResendEmail = async () => {
-    if (resendEmailClicked || resendEmailLoading) {
-      return; // Prevent multiple clicks
+    if (resendEmailLoading) {
+      return; // Prevent multiple clicks while loading
     }
 
     if (!signupEmail) {
@@ -171,19 +166,20 @@ export default function Login() {
     setResendEmailLoading(true);
     setResendEmailError(null);
     setResendEmailSuccess(false);
+    setResendEmailClicked(false); // Reset clicked state to allow retry
 
     try {
       const response = await authApi.resendEmail(signupEmail);
-      setResendEmailClicked(true); // Mark as clicked - can only click once
       setResendEmailSuccess(true);
       setResendEmailError(null);
+      // Don't set resendEmailClicked here - allow user to click again if needed
     } catch (err: any) {
       console.error("Resend email error:", err);
       const errorData = err.errorData || {};
       const errorMessage = errorData.error || err.message || err.error || "Failed to resend email. Please try again later.";
       setResendEmailError(errorMessage);
       setResendEmailSuccess(false);
-      // Don't mark as clicked on error, so user can retry
+      // Keep clicked state false so user can retry on error
       setResendEmailClicked(false);
     } finally {
       setResendEmailLoading(false);
@@ -219,21 +215,21 @@ export default function Login() {
                 <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    Account created successfully! Please check your email for your temporary password.
+                    A temporary password has been sent to your email. Please check your inbox (and spam folder).
                   </p>
                 </div>
               </div>
               
-              {/* Resend Email Link */}
-              {!resendEmailClicked && !resendEmailSuccess && (
+              {/* Resend Email Link - Always show if not already successfully resent */}
+              {!resendEmailSuccess && (
                 <div className="text-center">
                   <button
                     type="button"
                     onClick={handleResendEmail}
-                    disabled={resendEmailLoading}
+                    disabled={resendEmailLoading || resendEmailClicked}
                     className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
                   >
-                    {resendEmailLoading ? "Sending..." : "Didn't receive email? Click here to send again"}
+                    {resendEmailLoading ? "Sending..." : resendEmailClicked ? "Email sent" : "Didn't receive email? Click here to send again"}
                   </button>
                 </div>
               )}

@@ -1,0 +1,8 @@
+# Redirect rules for AWS Amplify
+# Redirect trailing slashes to non-trailing versions
+/login/ /login 301
+/settings/ /settings 301
+/profile/* /profile/* 301
+
+# SPA fallback - all routes should serve index.html
+/*    /index.html   200
