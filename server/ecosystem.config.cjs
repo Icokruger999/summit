@@ -11,7 +11,7 @@ module.exports = {
       // Auto-restart configuration
       autorestart: true,
       watch: false, // Don't watch files in production
-      max_memory_restart: '1G',
+      max_memory_restart: '512M', // Reduced to prevent OOM kills on smaller instances
       // Error handling
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
