@@ -13,7 +13,6 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.4",
     "date-fns": "^2.30.0",
     "livekit-client": "^2.0.0",
     "lucide-react": "^0.294.0",

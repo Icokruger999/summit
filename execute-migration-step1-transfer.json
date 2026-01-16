@@ -1,7 +1,0 @@
-{
-  "commands": [
-    "cd /var/www && tar -czf /tmp/summit-backup.tar.gz summit && ls -lh /tmp/summit-backup.tar.gz",
-    "cd /tmp && split -b 1m summit-backup.tar.gz summit-backup.tar.gz.part && ls -lh summit-backup.tar.gz.part*"
-  ]
-}
-

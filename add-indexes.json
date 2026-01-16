@@ -1,9 +1,0 @@
-{
-  "commands": [
-    "cd /tmp && rm -rf summit",
-    "git clone https://github.com/Icokruger999/summit.git",
-    "cd summit/database",
-    "PGPASSWORD=Stacey1122 psql -h codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com -U postgres -d Summit -f add_performance_indexes.sql"
-  ]
-}
-

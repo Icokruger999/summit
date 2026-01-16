@@ -1,0 +1,33 @@
+{
+  "commands": [
+    "echo '=== Backup current .env ==='",
+    "cd /home/ubuntu/summit/server && cp .env .env.backup",
+    "echo ''",
+    "echo '=== Update .env to use local PostgreSQL ==='",
+    "cd /home/ubuntu/summit/server && cat > .env << 'EOF'",
+    "PORT=3000",
+    "DB_HOST=localhost",
+    "DB_PORT=5432",
+    "DB_NAME=summit",
+    "DB_USER=summit_user",
+    "DB_PASSWORD=summit_secure_2024",
+    "JWT_SECRET=bb68fcf7-ab87-4fff-9714-3593a3631430",
+    "CORS_ORIGIN=https://summit.codingeverest.com,https://www.codingeverest.com,https://codingeverest.com",
+    "NODE_ENV=production",
+    "EOF",
+    "echo ''",
+    "echo '=== Restart server ==='",
+    "pm2 restart summit-backend",
+    "sleep 3",
+    "echo ''",
+    "echo '=== Check status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Test health ==='",
+    "curl -s http://localhost:3000/health",
+    "echo ''",
+    "echo ''",
+    "echo '=== Check for errors ==='",
+    "pm2 logs summit-backend --err --lines 5 --nostream"
+  ]
+}

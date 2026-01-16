@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "echo '=== Test health endpoint ==='",
+    "curl -s http://localhost:3000/health",
+    "echo ''",
+    "echo ''",
+    "echo '=== Wait a few seconds for any errors ==='",
+    "sleep 5",
+    "echo ''",
+    "echo '=== Check recent error logs ==='",
+    "pm2 logs summit-backend --err --lines 10 --nostream | tail -20",
+    "echo ''",
+    "echo '=== PM2 Status ==='",
+    "pm2 status"
+  ]
+}

@@ -1,9 +1,0 @@
-﻿{
-    "commands":  [
-                     "cd /var/www/summit || cd /home/ec2-user/summit || (echo \u0027Finding summit...\u0027 \u0026\u0026 find /home /var/www /opt -name \u0027summit\u0027 -type d 2\u003e/dev/null | head -1 | xargs -I {} sh -c \u0027cd {} \u0026\u0026 pwd\u0027)",
-                     "pwd",
-                     "git status 2\u003e\u00261 || echo \u0027Not a git repo, checking if code exists...\u0027",
-                     "ls -la server/src/routes/meetings.ts 2\u003e\u00261 || echo \u0027File not found\u0027",
-                     "cd server 2\u003e/dev/null \u0026\u0026 pwd || echo \u0027Server dir not found\u0027"
-                 ]
-}

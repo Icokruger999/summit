@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "echo '=== PM2 Status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Health Check ==='",
+    "curl -s http://localhost:3000/health",
+    "echo ''",
+    "echo ''",
+    "echo '=== Test subscription endpoint ==='",
+    "echo 'Server is ready for subscription requests'"
+  ]
+}

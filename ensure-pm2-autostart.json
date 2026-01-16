@@ -1,0 +1,21 @@
+{
+  "commands": [
+    "echo '=== Current PM2 Status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Save PM2 configuration ==='",
+    "pm2 save --force",
+    "echo ''",
+    "echo '=== Check PM2 startup service ==='",
+    "systemctl status pm2-root --no-pager | head -10",
+    "echo ''",
+    "echo '=== Ensure PM2 starts on boot ==='",
+    "systemctl enable pm2-root",
+    "echo ''",
+    "echo '=== Test health endpoint ==='",
+    "curl -s http://localhost:3000/health",
+    "echo ''",
+    "echo ''",
+    "echo '✅ PM2 is configured to auto-start on server reboot'"
+  ]
+}

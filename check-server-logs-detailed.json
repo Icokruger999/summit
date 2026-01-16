@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "echo '=== PM2 Status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Recent Error Logs (last 30 lines) ==='",
+    "pm2 logs summit-backend --err --lines 30 --nostream",
+    "echo ''",
+    "echo '=== Recent Output Logs (last 20 lines) ==='",
+    "pm2 logs summit-backend --out --lines 20 --nostream"
+  ]
+}

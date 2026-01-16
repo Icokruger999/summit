@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "echo '=== Check .env for Supabase ==='",
+    "cd /home/ubuntu/summit/server && grep -i supabase .env || echo 'No Supabase variables found'",
+    "echo ''",
+    "echo '=== Check if Supabase client is being initialized ==='",
+    "cd /home/ubuntu/summit/server && grep -r 'createClient' dist/ || echo 'No createClient found'",
+    "echo ''",
+    "echo '=== Recent server errors ==='",
+    "pm2 logs summit-backend --err --lines 10 --nostream"
+  ]
+}

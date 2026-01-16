@@ -1,0 +1,19 @@
+{
+  "commands": [
+    "echo '=== Stopping PM2 ==='",
+    "pm2 stop summit-backend",
+    "echo ''",
+    "echo '=== Rebuilding server ==='",
+    "cd /home/ubuntu/summit/server && npm run build",
+    "echo ''",
+    "echo '=== Starting server ==='",
+    "cd /home/ubuntu/summit/server && pm2 start ecosystem.config.cjs",
+    "sleep 3",
+    "echo ''",
+    "echo '=== PM2 Status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Test health ==='",
+    "curl -s http://localhost:3000/health"
+  ]
+}

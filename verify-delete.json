@@ -1,7 +1,0 @@
-﻿{
-  "InstanceIds": ["i-06bc5b2218c041802"],
-  "DocumentName": "AWS-RunShellScript",
-  "Parameters": {
-    "commands": ["PGPASSWORD='Stacey1122' psql -h codingeverest.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com -U postgres -d postgres -c '\\l' 2>&1 | grep -i summit || echo 'Summit database not found (deleted successfully)'"]
-  }
-}

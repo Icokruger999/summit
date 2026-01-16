@@ -1,6 +1,0 @@
-{
-  "commands": [
-    "cd /tmp && rm -rf summit && git clone https://github.com/Icokruger999/summit.git && cd summit/backend && mkdir -p /var/www/summit && cp -r dist package.json package-lock.json .env.production /var/www/summit/"
-  ]
-}
-

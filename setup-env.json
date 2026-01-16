@@ -1,7 +1,0 @@
-﻿{
-  "InstanceIds": ["i-0fba58db502cc8d39"],
-  "DocumentName": "AWS-RunShellScript",
-  "Parameters": {
-    "commands": ["cat > /var/www/summit/server/.env << 'ENVEOF'\nPORT=4000\nNODE_ENV=production\nDB_HOST=codingeverest-new.cl4qcomc6fj0.eu-west-1.rds.amazonaws.com\nDB_PORT=5432\nDB_NAME=Summit\nDB_USER=postgres\nDB_PASSWORD=Stacey1122\nJWT_SECRET=\nCORS_ORIGIN=https://summit.codingeverest.com,https://www.codingeverest.com\nENVEOF\nchmod 600 /var/www/summit/server/.env && cat /var/www/summit/server/.env"]
-  }
-}

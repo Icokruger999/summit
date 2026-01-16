@@ -13,7 +13,6 @@
     "status:pm2": "pm2 status"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.90.1",
     "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",

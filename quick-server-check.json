@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "echo '=== PM2 Status ==='",
+    "pm2 status",
+    "echo ''",
+    "echo '=== Test health endpoint ==='",
+    "curl -s http://localhost:3000/health",
+    "echo ''",
+    "echo ''",
+    "echo '=== Check if server is listening ==='",
+    "lsof -i:3000 || echo 'Nothing on port 3000'",
+    "echo ''",
+    "echo '=== Recent logs ==='",
+    "pm2 logs summit-backend --lines 5 --nostream"
+  ]
+}

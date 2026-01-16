@@ -1,16 +1,12 @@
 import express from "express";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
-import supabase from "../lib/supabase.js";
+import { query } from "../lib/db.js";
 
 const router = express.Router();
 
 // Update user presence status
 router.put("/", authenticate, async (req: AuthRequest, res) => {
   try {
-    if (!supabase) {
-      throw new Error("Supabase client not initialized");
-    }
-
     const userId = req.user!.id;
     const { status } = req.body;
 
@@ -18,35 +14,21 @@ router.put("/", authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Invalid status. Must be 'online', 'offline', 'away', 'busy', or 'dnd'" });
     }
 
-    // Upsert presence using Supabase client (bypasses RLS with service role key)
-    const now = new Date().toISOString();
-    
-    // Get existing presence to preserve last_seen if status is not 'online'
-    const { data: existing } = await supabase
-      .from('presence')
-      .select('last_seen')
-      .eq('user_id', userId)
-      .single();
+    const now = new Date();
+    const lastSeen = status === 'online' ? now : null;
 
-    const lastSeen = status === 'online' ? now : (existing?.last_seen || null);
-
-    const { data, error } = await supabase
-      .from('presence')
-      .upsert({
-        user_id: userId,
-        status: status,
-        last_seen: lastSeen,
-        updated_at: now
-      }, {
-        onConflict: 'user_id'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating presence:", error);
-      throw error;
-    }
+    // Upsert presence using PostgreSQL
+    const result = await query(
+      `INSERT INTO presence (user_id, status, last_seen, updated_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) 
+       DO UPDATE SET 
+         status = EXCLUDED.status,
+         last_seen = CASE WHEN EXCLUDED.status = 'online' THEN EXCLUDED.last_seen ELSE presence.last_seen END,
+         updated_at = EXCLUDED.updated_at
+       RETURNING *`,
+      [userId, status, lastSeen, now]
+    );
 
     res.json({ success: true });
   } catch (error: any) {
@@ -58,27 +40,20 @@ router.put("/", authenticate, async (req: AuthRequest, res) => {
 // Get presence for multiple users
 router.post("/batch", authenticate, async (req: AuthRequest, res) => {
   try {
-    if (!supabase) {
-      throw new Error("Supabase client not initialized");
-    }
-
     const { userIds } = req.body;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return res.status(400).json({ error: "userIds must be a non-empty array" });
     }
 
-    const { data, error } = await supabase
-      .from('presence')
-      .select('user_id, status, last_seen, updated_at')
-      .in('user_id', userIds);
+    const result = await query(
+      `SELECT user_id, status, last_seen, updated_at 
+       FROM presence 
+       WHERE user_id = ANY($1)`,
+      [userIds]
+    );
 
-    if (error) {
-      console.error("Error fetching presence:", error);
-      throw error;
-    }
-
-    res.json(data || []);
+    res.json(result.rows || []);
   } catch (error: any) {
     console.error("Error fetching presence:", error);
     res.status(500).json({ error: error.message });
@@ -88,28 +63,21 @@ router.post("/batch", authenticate, async (req: AuthRequest, res) => {
 // Get presence for a single user
 router.get("/:userId", authenticate, async (req: AuthRequest, res) => {
   try {
-    if (!supabase) {
-      throw new Error("Supabase client not initialized");
-    }
-
     const { userId } = req.params;
 
-    const { data, error } = await supabase
-      .from('presence')
-      .select('user_id, status, last_seen, updated_at')
-      .eq('user_id', userId)
-      .single();
+    const result = await query(
+      `SELECT user_id, status, last_seen, updated_at 
+       FROM presence 
+       WHERE user_id = $1`,
+      [userId]
+    );
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned
-        return res.json({ user_id: userId, status: "offline", last_seen: null });
-      }
-      console.error("Error fetching presence:", error);
-      throw error;
+    if (result.rows.length === 0) {
+      // No rows returned
+      return res.json({ user_id: userId, status: "offline", last_seen: null });
     }
 
-    res.json(data);
+    res.json(result.rows[0]);
   } catch (error: any) {
     console.error("Error fetching presence:", error);
     res.status(500).json({ error: error.message });
@@ -117,4 +85,3 @@ router.get("/:userId", authenticate, async (req: AuthRequest, res) => {
 });
 
 export default router;
-

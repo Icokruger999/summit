@@ -1,6 +1,0 @@
-{
-  "commands": [
-    "cd /tmp && if [ -f summit-backup.tar.gz ]; then echo 'Tarball exists'; ls -lh summit-backup.tar.gz; else echo 'Tarball not found'; fi"
-  ]
-}
-

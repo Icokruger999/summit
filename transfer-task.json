@@ -1,7 +1,0 @@
-﻿{
-  "InstanceIds": ["i-06bc5b2218c041802"],
-  "DocumentName": "AWS-RunShellScript",
-  "Parameters": {
-    "commands": ["scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/summit-backup.tar.gz ubuntu@172.31.49.125:/tmp/ 2>&1 && echo 'Transfer complete' || echo 'Transfer failed'"]
-  }
-}
