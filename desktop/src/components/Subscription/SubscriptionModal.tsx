@@ -16,31 +16,34 @@ export default function SubscriptionModal({
   viewOnly = false
 }: SubscriptionModalProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<'basic' | 'pack' | 'enterprise' | null>(null);
+  const [selectedTier, setSelectedTier] = useState<'basic' | 'enterprise' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSelectPlan = async (tier: 'basic' | 'pack' | 'enterprise') => {
+  const handleSelectPlan = async (tier: 'basic' | 'enterprise') => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     setSelectedTier(tier);
 
     try {
-      const result = await subscriptionsApi.selectPlan(tier);
-      
-      if (tier === 'enterprise') {
-        setSuccess(`Please contact ${result.contactEmail} for Enterprise subscription details.`);
-      } else {
-        setSuccess(result.message || "Subscription plan selected successfully!");
+      // Sandbox mode: Basic plan immediately unlocks the app
+      if (tier === 'basic') {
+        setSuccess("Basic subscription activated! Unlocking Summit...");
         if (onSubscriptionSelected) {
           setTimeout(() => {
             onSubscriptionSelected();
             onClose();
-          }, 2000);
+          }, 1500);
         }
+        return;
+      }
+
+      // Enterprise requires contact
+      if (tier === 'enterprise') {
+        setSuccess("Please contact summit@codingeverest.com for Enterprise subscription details.");
       }
     } catch (err: any) {
       setError(err.errorData?.error || err.message || "Failed to select subscription plan");
@@ -79,10 +82,13 @@ export default function SubscriptionModal({
             </div>
           )}
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             {/* Basic Plan */}
-            <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors">
-              <div className="text-center mb-4">
+            <div className="border-2 border-blue-500 rounded-xl p-6 hover:border-blue-600 transition-colors relative">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                RECOMMENDED
+              </div>
+              <div className="text-center mb-4 mt-2">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <Users className="w-6 h-6 text-blue-600" />
                 </div>
@@ -117,54 +123,6 @@ export default function SubscriptionModal({
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading && selectedTier === 'basic' ? 'Processing...' : 'Select Plan'}
-                </button>
-              )}
-            </div>
-
-            {/* Pack Plan */}
-            <div className="border-2 border-purple-500 rounded-xl p-6 relative hover:border-purple-600 transition-colors">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                POPULAR
-              </div>
-              <div className="text-center mb-4 mt-2">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-6 h-6 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Pack</h3>
-                <div className="mt-2">
-                  <span className="text-3xl font-bold text-gray-900">R800</span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-6">
-                <li className="flex items-center gap-2 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>5 users</span>
-                </li>
-                <li className="flex items-center gap-2 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Unlimited messages</span>
-                </li>
-                <li className="flex items-center gap-2 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Unlimited meetings</span>
-                </li>
-                <li className="flex items-center gap-2 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Full feature access</span>
-                </li>
-                <li className="flex items-center gap-2 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Manage team members</span>
-                </li>
-              </ul>
-              {!viewOnly && (
-                <button
-                  onClick={() => handleSelectPlan('pack')}
-                  disabled={loading}
-                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading && selectedTier === 'pack' ? 'Processing...' : 'Select Plan'}
                 </button>
               )}
             </div>
@@ -216,9 +174,9 @@ export default function SubscriptionModal({
           </div>
 
           {!viewOnly && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 text-center">
-                <strong>Note:</strong> Payment processing will be implemented soon. Selecting a plan now reserves your subscription tier.
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-700 text-center">
+                <strong>Sandbox Mode:</strong> Selecting Basic plan will immediately unlock Summit for testing.
               </p>
             </div>
           )}
