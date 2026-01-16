@@ -29,8 +29,10 @@ export default function SubscriptionModal({
     setSelectedTier(tier);
 
     try {
-      // Sandbox mode: Basic plan immediately unlocks the app
+      // Sandbox mode: Basic plan immediately unlocks the app by calling backend
       if (tier === 'basic') {
+        // Call backend to create subscription
+        await subscriptionsApi.selectPlan(tier);
         setSuccess("Basic subscription activated! Unlocking Summit...");
         if (onSubscriptionSelected) {
           setTimeout(() => {
