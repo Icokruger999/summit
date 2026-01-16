@@ -1,59 +1,36 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
+// crypto import removed - no longer needed
 import { 
   getUserByEmail, 
   getUserById, 
-  createUserWithTempPassword,
   updateUserPassword,
   deleteExpiredAccounts,
   startTrial,
-  resetTempPassword
+  query
 } from "../lib/db.js";
-import { sendTempPasswordEmail } from "../lib/email.js";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
 
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
-// Rate limiting for resend email (in-memory store)
-// Format: { email: { lastResend: timestamp, attempts: number } }
-const resendEmailLimits = new Map<string, { lastResend: number; attempts: number }>();
-const RESEND_COOLDOWN_MS = 60000; // 1 minute cooldown between resends
-const MAX_RESEND_ATTEMPTS = 3; // Max 3 resends per hour per email
+// No longer needed - removed temp password system
 
-// Clean up old entries periodically (older than 1 hour)
-setInterval(() => {
-  const oneHourAgo = Date.now() - 3600000;
-  for (const [email, data] of resendEmailLimits.entries()) {
-    if (data.lastResend < oneHourAgo) {
-      resendEmailLimits.delete(email);
-    }
-  }
-}, 3600000); // Run cleanup every hour
-
-// Generate secure random password
-function generateTempPassword(): string {
-  // Generate 12-character password with uppercase, lowercase, numbers
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const randomBytes = crypto.randomBytes(12);
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars[randomBytes[i] % chars.length];
-  }
-  return password;
-}
-
-// Register new user (no password - uses temp password)
+// Register new user (with password)
 router.post("/register", async (req, res) => {
   try {
-    const { email, name, job_title, phone, company } = req.body;
+    const { email, name, password, job_title, phone, company } = req.body;
 
     // Validate required fields
-    if (!email || !name) {
-      return res.status(400).json({ error: "Email and name are required" });
+    if (!email || !name || !password) {
+      return res.status(400).json({ error: "Email, name, and password are required" });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
     // Normalize email to lowercase for case-insensitive handling
@@ -68,107 +45,70 @@ router.post("/register", async (req, res) => {
     // Check if user already exists (case-insensitive)
     const existingUser = await getUserByEmail(normalizedEmail);
     if (existingUser) {
-      // Check if user has already changed password (has permanent password)
-      if (existingUser.password_hash && !existingUser.temp_password_hash) {
-        return res.status(400).json({ 
-          error: "ACCOUNT_VERIFIED",
-          message: "You have already verified your account. Please log in with your email and the password you chose."
-        });
-      }
-      
-      // User exists but hasn't changed password yet (still has temp password)
-      // Automatically generate new temporary password and send it
-      const tempPassword = generateTempPassword();
-      const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-      
-      // Update user's temp password
-      await resetTempPassword(normalizedEmail, tempPasswordHash);
-      
-      // Send temp password email
-      try {
-        await sendTempPasswordEmail(normalizedEmail, existingUser.name || name, tempPassword);
-        console.log(`✅ Resent temp password email to ${normalizedEmail} (account already exists with temp password)`);
-      } catch (emailError: any) {
-        console.error("❌ Failed to send temp password email:", emailError);
-        // Return error if email fails
-        return res.status(500).json({ 
-          error: "Failed to send email. Please try again later or use the resend email option.",
-          email: normalizedEmail
-        });
-      }
-      
-      // Return success - new temp password sent
-      return res.status(200).json({ 
-        message: "An account with this email already exists. We've sent a new temporary password to your email. Please check your inbox.",
-        email: normalizedEmail,
-        accountExists: true
+      return res.status(400).json({ 
+        error: "User already exists",
+        message: "An account with this email already exists. Please log in instead."
       });
     }
 
-    // Generate temporary password
-    const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user with temp password (email is normalized inside createUserWithTempPassword)
-    const user = await createUserWithTempPassword(
-      normalizedEmail,
-      name,
-      tempPasswordHash,
-      job_title,
-      phone,
-      company
+    // Normalize optional fields
+    const normalizedJobTitle = (!job_title || job_title.trim() === '' || job_title.trim().toUpperCase() === 'N/A') 
+      ? null 
+      : job_title.trim();
+    const normalizedPhone = (!phone || phone.trim() === '' || phone.trim().toUpperCase() === 'N/A') 
+      ? null 
+      : phone.trim();
+    const normalizedCompany = (!company || company.trim() === '' || company.trim().toUpperCase() === 'N/A') 
+      ? null 
+      : company.trim();
+
+    // Create user with password
+    const result = await query(
+      `INSERT INTO users (email, name, password_hash, job_title, phone, company, requires_password_change)
+       VALUES ($1, $2, $3, $4, $5, $6, false)
+       RETURNING id, email, name, avatar_url, company, job_title, phone, created_at`,
+      [normalizedEmail, name, passwordHash, normalizedJobTitle, normalizedPhone, normalizedCompany]
     );
 
-    // Send temp password email (use normalized email)
-    try {
-      await sendTempPasswordEmail(normalizedEmail, name, tempPassword);
-      console.log(`✅ Temp password email sent to ${normalizedEmail}`);
-    } catch (emailError: any) {
-      console.error("❌ Failed to send temp password email:", emailError);
-      // Don't fail registration if email fails - user can request password reset
-      // But log the error for monitoring
-    }
+    const user = result.rows[0];
 
-    // Return success (no token - user must login first)
+    // Start trial immediately
+    await startTrial(user.id);
+    console.log(`✅ User created and trial started for ${normalizedEmail}`);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Return user data and token
     res.json({
-      message: "Account created successfully. Please check your email for your temporary password.",
-      email: user.email,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        company: user.company,
+        job_title: user.job_title,
+        phone: user.phone,
+      },
+      token,
+      message: "Account created successfully. Your 3-day trial has started!",
     });
   } catch (error: any) {
     console.error("Error registering user:", error);
     
-    // Handle duplicate user error (should not happen if check above works, but handle it anyway)
-    if (error.code === 'DUPLICATE_USER' || error.message?.includes('already exists') || error.message?.includes('duplicate')) {
-      // Try to get existing user and handle based on their status
-      const existingUser = await getUserByEmail(normalizedEmail);
-      if (existingUser) {
-        // Check if user has already changed password (has permanent password)
-        if (existingUser.password_hash && !existingUser.temp_password_hash) {
-          return res.status(400).json({ 
-            error: "ACCOUNT_VERIFIED",
-            message: "You have already verified your account. Please log in with your email and the password you chose."
-          });
-        }
-        
-        // User exists but hasn't changed password yet - resend temp password
-        const tempPassword = generateTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-        await resetTempPassword(normalizedEmail, tempPasswordHash);
-        
-        try {
-          await sendTempPasswordEmail(normalizedEmail, existingUser.name || name, tempPassword);
-          return res.status(200).json({ 
-            message: "An account with this email already exists. We've sent a new temporary password to your email. Please check your inbox.",
-            email: normalizedEmail,
-            accountExists: true
-          });
-        } catch (emailError: any) {
-          return res.status(500).json({ 
-            error: "Failed to send email. Please try again later or use the resend email option.",
-            email: normalizedEmail
-          });
-        }
-      }
+    // Handle duplicate user error
+    if (error.code === '23505' || error.constraint === 'users_email_key' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+      return res.status(400).json({ 
+        error: "User already exists",
+        message: "An account with this email already exists. Please log in instead."
+      });
     }
     
     res.status(500).json({ error: error.message || "Failed to create account" });
@@ -193,21 +133,12 @@ router.post("/login", async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    // Check if user has temp password or regular password
-    let isValidPassword = false;
-    let isTempPassword = false;
-
-    if (user.temp_password_hash) {
-      // Check temp password
-      isValidPassword = await bcrypt.compare(password, user.temp_password_hash);
-      isTempPassword = isValidPassword;
+    // Check password
+    if (!user.password_hash) {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    if (!isValidPassword && user.password_hash) {
-      // Check regular password
-      isValidPassword = await bcrypt.compare(password, user.password_hash);
-    }
-
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -219,7 +150,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // Return user data with password change requirement flag
+    // Return user data
     res.json({
       user: {
         id: user.id,
@@ -231,7 +162,6 @@ router.post("/login", async (req, res) => {
         phone: user.phone,
       },
       token,
-      requiresPasswordChange: user.requires_password_change || false,
     });
   } catch (error: any) {
     console.error("Error logging in:", error);
@@ -338,137 +268,9 @@ router.get("/me", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// Resend temporary password email
-router.post("/resend-email", async (req, res) => {
-  try {
-    const { email } = req.body;
+// Resend email endpoint removed - no longer needed without temp passwords
 
-    if (!email) {
-      return res.status(400).json({ error: "Email is required" });
-    }
-
-    // Normalize email to lowercase
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({ error: "Invalid email format" });
-    }
-
-    // Check rate limiting
-    const now = Date.now();
-    const limitData = resendEmailLimits.get(normalizedEmail);
-    
-    if (limitData) {
-      // Check if within cooldown period
-      const timeSinceLastResend = now - limitData.lastResend;
-      if (timeSinceLastResend < RESEND_COOLDOWN_MS) {
-        const secondsRemaining = Math.ceil((RESEND_COOLDOWN_MS - timeSinceLastResend) / 1000);
-        return res.status(429).json({ 
-          error: `Please wait ${secondsRemaining} second${secondsRemaining !== 1 ? 's' : ''} before requesting another email.`,
-          cooldownSeconds: secondsRemaining
-        });
-      }
-
-      // Check if max attempts reached (reset after 1 hour)
-      if (limitData.attempts >= MAX_RESEND_ATTEMPTS) {
-        const oneHourAgo = now - 3600000;
-        if (limitData.lastResend > oneHourAgo) {
-          return res.status(429).json({ 
-            error: "Too many resend requests. Please try again later.",
-            maxAttempts: MAX_RESEND_ATTEMPTS
-          });
-        } else {
-          // Reset attempts if more than 1 hour has passed
-          limitData.attempts = 0;
-        }
-      }
-    }
-
-    // Check if user exists
-    const user = await getUserByEmail(normalizedEmail);
-    if (!user) {
-      // Don't reveal if user exists or not for security
-      // But still apply rate limiting
-      if (!limitData) {
-        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
-      } else {
-        limitData.lastResend = now;
-        limitData.attempts += 1;
-      }
-      
-      // Return success message even if user doesn't exist (security best practice)
-      return res.json({ 
-        message: "If an account exists with this email, a new temporary password has been sent." 
-      });
-    }
-
-    // Check if user has already changed password (no temp password exists)
-    if (!user.temp_password_hash && user.password_hash) {
-      return res.status(400).json({ 
-        error: "Password has already been set. Please use the login page or password reset." 
-      });
-    }
-
-    // Generate new temporary password
-    const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-
-    // Update user's temp password
-    await resetTempPassword(normalizedEmail, tempPasswordHash);
-
-    // Send email
-    try {
-      await sendTempPasswordEmail(normalizedEmail, user.name || "User", tempPassword);
-      console.log(`✅ Resent temp password email to ${normalizedEmail}`);
-      
-      // Update rate limiting
-      if (!limitData) {
-        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
-      } else {
-        limitData.lastResend = now;
-        limitData.attempts += 1;
-      }
-
-      res.json({ 
-        message: "A new temporary password has been sent to your email." 
-      });
-    } catch (emailError: any) {
-      console.error("❌ Failed to resend temp password email:", emailError);
-      // Update rate limiting even on error to prevent abuse
-      if (!limitData) {
-        resendEmailLimits.set(normalizedEmail, { lastResend: now, attempts: 1 });
-      } else {
-        limitData.lastResend = now;
-        limitData.attempts += 1;
-      }
-      
-      throw new Error("Failed to send email. Please try again later.");
-    }
-  } catch (error: any) {
-    console.error("Error resending email:", error);
-    res.status(500).json({ error: error.message || "Failed to resend email" });
-  }
-});
-
-// Cleanup expired accounts (can be called via cron job)
-router.post("/cleanup-expired-accounts", async (req, res) => {
-  try {
-    // Optional: Add authentication/authorization for this endpoint
-    // For now, it's open but should be protected in production
-    
-    const deletedCount = await deleteExpiredAccounts();
-    
-    res.json({
-      message: "Cleanup completed",
-      deletedAccounts: deletedCount,
-    });
-  } catch (error: any) {
-    console.error("Error cleaning up expired accounts:", error);
-    res.status(500).json({ error: error.message || "Failed to cleanup expired accounts" });
-  }
-});
+// Cleanup endpoint removed - no longer needed without temp passwords
 
 // Health check
 router.get("/health", (req, res) => {

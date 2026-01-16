@@ -73,24 +73,24 @@ export async function apiRequest<T>(
 }
 
 // Auth API
-// Signup: No password required - temporary password sent via email
 export const authApi = {
-  register: async (email: string, name: string, jobTitle?: string, phone?: string, company?: string) => {
-    return apiRequest<{ message: string; email: string; accountExists?: boolean }>("/api/auth/register", {
+  register: async (email: string, name: string, jobTitle?: string, phone?: string, company?: string, password?: string) => {
+    return apiRequest<{ user: any; token: string; message: string }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ 
         email, 
         name, 
-        job_title: jobTitle || "N/A",
-        phone: phone || "N/A",
-        company: company || "N/A"
+        password,
+        job_title: jobTitle,
+        phone: phone,
+        company: company
       }),
     });
   },
 
   login: async (email: string, password: string) => {
     try {
-      return await apiRequest<{ user: any; token: string; requiresPasswordChange?: boolean }>("/api/auth/login", {
+      return await apiRequest<{ user: any; token: string }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -101,13 +101,6 @@ export const authApi = {
       }
       throw error;
     }
-  },
-
-  resendEmail: async (email: string) => {
-    return apiRequest<{ message: string; cooldownSeconds?: number; maxAttempts?: number }>("/api/auth/resend-email", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
   },
 
   changePassword: async (currentPassword: string, newPassword: string) => {

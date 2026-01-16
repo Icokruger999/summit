@@ -11,28 +11,23 @@ export default function Login() {
   
   // Signup state
   const [name, setName] = useState("");
-  const [jobTitle, setJobTitle] = useState("N/A");
-  const [phone, setPhone] = useState("N/A");
-  const [company, setCompany] = useState("N/A");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountNotFound, setAccountNotFound] = useState(false);
-  const [signupSuccess, setSignupSuccess] = useState(false);
+
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [signupEmail, setSignupEmail] = useState<string>("");
-  const [resendEmailClicked, setResendEmailClicked] = useState(false);
-  const [resendEmailLoading, setResendEmailLoading] = useState(false);
-  const [resendEmailError, setResendEmailError] = useState<string | null>(null);
-  const [resendEmailSuccess, setResendEmailSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setAccountNotFound(false);
-    setSignupSuccess(false);
 
     try {
       if (isSignUp) {
@@ -49,39 +44,40 @@ export default function Login() {
           return;
         }
 
-        // Register user (no password needed)
+        if (!signupPassword || signupPassword.trim() === "") {
+          setError("Password is required");
+          setLoading(false);
+          return;
+        }
+
+        if (signupPassword.length < 6) {
+          setError("Password must be at least 6 characters");
+          setLoading(false);
+          return;
+        }
+
+        // Register user with password
         const registerResponse = await authApi.register(
           email.trim(),
           name.trim(),
-          jobTitle.trim() === "" || jobTitle.trim().toUpperCase() === "N/A" ? undefined : jobTitle.trim(),
-          phone.trim() === "" || phone.trim().toUpperCase() === "N/A" ? undefined : phone.trim(),
-          company.trim() === "" || company.trim().toUpperCase() === "N/A" ? undefined : company.trim()
+          jobTitle.trim() === "" ? undefined : jobTitle.trim(),
+          phone.trim() === "" ? undefined : phone.trim(),
+          company.trim() === "" ? undefined : company.trim(),
+          signupPassword.trim()
         );
 
-        // Show success message (works for both new accounts and existing accounts with temp password)
-        setSignupSuccess(true);
-        setError(null);
-        setSignupEmail(email.trim()); // Store email for resend functionality
-        setResendEmailClicked(false); // Reset resend state
-        setResendEmailError(null);
-        setResendEmailSuccess(false);
+        // Store token and user data
+        localStorage.setItem("auth_token", registerResponse.token);
+        localStorage.setItem("user", JSON.stringify(registerResponse.user));
+        localStorage.setItem("account_just_created", "true");
         
-        // Clear form
-        setName("");
-        setEmail("");
-        setJobTitle("N/A");
-        setPhone("N/A");
-        setCompany("N/A");
+        // Force page reload to ensure App component re-initializes with auth state
+        window.location.href = "/";
       } else {
         // Login
         const response = await authApi.login(email, password);
         localStorage.setItem("auth_token", response.token);
         localStorage.setItem("user", JSON.stringify(response.user));
-        
-        // Store password change requirement
-        if (response.requiresPasswordChange) {
-          localStorage.setItem("requires_password_change", "true");
-        }
         
         // Force page reload to ensure App component re-initializes with auth state
         window.location.href = "/";
@@ -114,27 +110,8 @@ export default function Login() {
           setError(errorMessage);
         }
       } else {
-        // For sign up, handle specific error cases
-        const errorData = err.errorData || {};
-        const errorCode = errorData.error;
-        
-        // Log the error for debugging
-        console.log("Signup error:", { statusCode, errorCode, errorData, errorMessage });
-        
-        if (errorCode === "ACCOUNT_VERIFIED") {
-          // User has already verified their account (has permanent password)
-          setError(errorData.message || "You have already verified your account. Please log in with your email and the password you chose.");
-        } else if (errorCode === "User already exists" || errorMessage.toLowerCase().includes("user already exists") || errorMessage.toLowerCase().includes("already exists")) {
-          // Handle "User already exists" error - show resend option
-          setSignupEmail(email.trim());
-          setResendEmailClicked(false);
-          setResendEmailError(null);
-          setResendEmailSuccess(false);
-          setError("An account with this email already exists. Did you receive your temporary password?");
-        } else {
-          // For other errors, show the actual error
-          setError(errorMessage);
-        }
+        // For sign up, show the actual error
+        setError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -145,45 +122,8 @@ export default function Login() {
     setIsSignUp(true);
     setError(null);
     setAccountNotFound(false);
-    setSignupSuccess(false);
     setPassword("");
-    setResendEmailClicked(false);
-    setResendEmailError(null);
-    setResendEmailSuccess(false);
-    setSignupEmail("");
-  };
-
-  const handleResendEmail = async () => {
-    if (resendEmailLoading) {
-      return; // Prevent multiple clicks while loading
-    }
-
-    if (!signupEmail) {
-      setResendEmailError("Email address not found. Please try creating an account again.");
-      return;
-    }
-
-    setResendEmailLoading(true);
-    setResendEmailError(null);
-    setResendEmailSuccess(false);
-    setResendEmailClicked(false); // Reset clicked state to allow retry
-
-    try {
-      const response = await authApi.resendEmail(signupEmail);
-      setResendEmailSuccess(true);
-      setResendEmailError(null);
-      // Don't set resendEmailClicked here - allow user to click again if needed
-    } catch (err: any) {
-      console.error("Resend email error:", err);
-      const errorData = err.errorData || {};
-      const errorMessage = errorData.error || err.message || err.error || "Failed to resend email. Please try again later.";
-      setResendEmailError(errorMessage);
-      setResendEmailSuccess(false);
-      // Keep clicked state false so user can retry on error
-      setResendEmailClicked(false);
-    } finally {
-      setResendEmailLoading(false);
-    }
+    setSignupPassword("");
   };
 
   return (
@@ -208,131 +148,36 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Success Message (Signup) */}
-          {signupSuccess && (
-            <div className="space-y-3">
-              <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
-                <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    A temporary password has been sent to your email. Please check your inbox (and spam folder).
-                  </p>
-                </div>
-              </div>
-              
-              {/* Resend Email Link - Always show (can be clicked multiple times) */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleResendEmail}
-                  disabled={resendEmailLoading}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
-                >
-                  {resendEmailLoading ? "Sending..." : "Didn't receive email? Click here to send again"}
-                </button>
-              </div>
+          {/* Success Message (Signup) - Removed */}
 
-              {/* Resend Success Message */}
-              {resendEmailSuccess && (
-                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
-                  <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      A new temporary password has been sent to your email.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Resend Error Message */}
-              {resendEmailError && (
-                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-red-50 border-red-500 text-red-700">
-                  <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {resendEmailError}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Error Message with Resend Option */}
-          {error && !signupSuccess && (
-            <div className="space-y-3">
-              <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
-                accountNotFound 
-                  ? "bg-blue-50 border-blue-500 text-blue-700" 
-                  : error.includes("already verified") || error.includes("log in")
-                    ? "bg-blue-50 border-blue-500 text-blue-700"
-                    : "bg-red-50 border-red-500 text-red-700"
-              }`}>
-                <div className={`w-2 h-2 rounded-full mt-1.5 ${
-                  accountNotFound || error.includes("already verified") || error.includes("log in")
-                    ? "bg-blue-500" 
-                    : "bg-red-500"
-                }`}></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{error}</p>
-                  {accountNotFound && (
-                    <button
-                      onClick={handleSwitchToSignUp}
-                      className="mt-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-lg hover:shadow-lg transition-all"
-                    >
-                      Create Account
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              {/* Show resend email option if account exists with temp password */}
-              {(error.includes("Did you receive your temporary password") || 
-                error.includes("already exists") || 
-                error.toLowerCase().includes("user already exists")) && 
-                signupEmail && (
-                <div className="text-center">
+          {/* Error Message */}
+          {error && (
+            <div className={`border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 animate-in slide-in-from-top ${
+              accountNotFound 
+                ? "bg-blue-50 border-blue-500 text-blue-700" 
+                : "bg-red-50 border-red-500 text-red-700"
+            }`}>
+              <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                accountNotFound
+                  ? "bg-blue-500" 
+                  : "bg-red-500"
+              }`}></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{error}</p>
+                {accountNotFound && (
                   <button
-                    type="button"
-                    onClick={handleResendEmail}
-                    disabled={resendEmailLoading}
-                    className="text-sm text-blue-600 hover:text-blue-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+                    onClick={handleSwitchToSignUp}
+                    className="mt-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-lg hover:shadow-lg transition-all"
                   >
-                    {resendEmailLoading 
-                      ? "Sending..." 
-                      : "Click here to resend your temporary password"}
+                    Create Account
                   </button>
-                </div>
-              )}
-
-              {/* Resend Success Message (when resending from error state) */}
-              {resendEmailSuccess && signupEmail && (
-                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-green-50 border-green-500 text-green-700">
-                  <div className="w-2 h-2 rounded-full mt-1.5 bg-green-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      A new temporary password has been sent to your email.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Resend Error Message (when resending from error state) */}
-              {resendEmailError && signupEmail && (
-                <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-red-50 border-red-500 text-red-700">
-                  <div className="w-2 h-2 rounded-full mt-1.5 bg-red-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {resendEmailError}
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
           {/* Trial Info Box (Signup) */}
-          {isSignUp && !signupSuccess && (
+          {isSignUp && (
             <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-blue-50 border-blue-500 text-blue-700">
               <Info className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -351,17 +196,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* Warning Message (Signup) */}
-          {isSignUp && !signupSuccess && (
-            <div className="border-l-4 px-4 py-3 rounded-lg flex items-start gap-2 bg-amber-50 border-amber-500 text-amber-700">
-              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">
-                  A temporary password will be sent to your email. You must change it within 24 hours or your account will be deleted.
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Warning Message removed - no longer using temp passwords */}
 
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
@@ -408,6 +243,33 @@ export default function Login() {
               </div>
             )}
 
+            {/* Password Field (Both Login and Signup) */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-500" />
+                Password {isSignUp && <span className="text-red-500">*</span>}
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  required
+                  className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
+                  placeholder={isSignUp ? "Create a password (min 6 characters)" : "Enter your password"}
+                  value={isSignUp ? signupPassword : password}
+                  onChange={(e) => isSignUp ? setSignupPassword(e.target.value) : setPassword(e.target.value)}
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
+              {isSignUp && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must be at least 6 characters long
+                </p>
+              )}
+            </div>
+
             {/* Two-column layout for optional fields on signup */}
             {isSignUp && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -422,7 +284,7 @@ export default function Login() {
                     name="jobTitle"
                     type="text"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                    placeholder="N/A (optional)"
+                    placeholder="Optional"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                   />
@@ -439,7 +301,7 @@ export default function Login() {
                     name="phone"
                     type="tel"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                    placeholder="N/A (optional)"
+                    placeholder="Optional"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />
@@ -459,41 +321,19 @@ export default function Login() {
                   name="company"
                   type="text"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                  placeholder="N/A (optional)"
+                  placeholder="Optional"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                 />
               </div>
             )}
 
-            {/* Password Field (Login Only) */}
-            {!isSignUp && (
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-blue-500" />
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
-              </div>
-            )}
+            {/* Password Field (Login Only) - Removed, now shown for both */}
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || signupSuccess}
+              disabled={loading}
               className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-sky-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -527,13 +367,13 @@ export default function Login() {
                 setIsSignUp(!isSignUp);
                 setError(null);
                 setAccountNotFound(false);
-                setSignupSuccess(false);
                 setPassword("");
+                setSignupPassword("");
                 setName("");
                 setEmail("");
-                setJobTitle("N/A");
-                setPhone("N/A");
-                setCompany("N/A");
+                setJobTitle("");
+                setPhone("");
+                setCompany("");
               }}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >

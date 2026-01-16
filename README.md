@@ -19,7 +19,7 @@ A modern communication platform built with React, Tailwind CSS, and LiveKit for 
 - **Frontend**: React + TypeScript + Tailwind CSS + Vite
 - **Desktop**: Tauri v2 (optional, Rust + React)
 - **Backend**: Node.js + Express + TypeScript
-- **Database**: AWS RDS PostgreSQL (Summit database)
+- **Database**: PostgreSQL + PgBouncer on EC2 (localhost connection pooling)
 - **Real-time**: LiveKit (WebRTC SFU + Data Channels)
 - **File Storage**: Backend file storage (configurable)
 - **Recording**: FFmpeg via Tauri plugin (desktop only)
@@ -39,7 +39,7 @@ CodingE-Chat/
 ### Prerequisites
 
 - Node.js 18+
-- AWS RDS PostgreSQL database (Summit)
+- PostgreSQL + PgBouncer on EC2 instance (see [EC2_DATABASE_SETUP.md](./EC2_DATABASE_SETUP.md))
 - LiveKit server (can run on EC2 or use LiveKit Cloud)
 
 **For Desktop App Only:**
@@ -89,7 +89,12 @@ CodingE-Chat/
    ```bash
    npm install
    ```
-3. Copy `.env.example` to `.env` and fill in your database and LiveKit credentials
+3. Copy `.env.example` to `.env` and configure:
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+   **Important**: Use `DB_HOST=127.0.0.1` and `DB_PORT=6432` (PgBouncer)
 4. Run in development:
    ```bash
    npm run dev
@@ -98,6 +103,9 @@ CodingE-Chat/
    ```bash
    npm run build
    npm start
+   ```
+
+See [TEST_SIGNIN.md](./TEST_SIGNIN.md) for testing and deployment verification.
    ```
 
 ### Database Setup (AWS RDS PostgreSQL)
