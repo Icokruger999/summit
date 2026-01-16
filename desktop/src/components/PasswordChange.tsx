@@ -41,7 +41,7 @@ export default function PasswordChange({ onComplete }: PasswordChangeProps) {
     }
 
     if (currentPassword === newPassword) {
-      setError("New password must be different from your temporary password");
+      setError("New password must be different from your current password");
       setLoading(false);
       return;
     }
@@ -120,11 +120,11 @@ export default function PasswordChange({ onComplete }: PasswordChangeProps) {
           {/* Form */}
           {!success && (
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Current Password (Temp Password) */}
+              {/* Current Password */}
               <div className="space-y-2">
                 <label htmlFor="currentPassword" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-blue-500" />
-                  Temporary Password <span className="text-red-500">*</span>
+                  Current Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -134,7 +134,7 @@ export default function PasswordChange({ onComplete }: PasswordChangeProps) {
                     autoComplete="current-password"
                     required
                     className="w-full px-4 py-3 pl-11 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white text-gray-900 placeholder:text-gray-400"
-                    placeholder="Enter your temporary password"
+                    placeholder="Enter your current password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                   />
