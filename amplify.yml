@@ -26,10 +26,10 @@ frontend:
         - pwd
         - |
           # Set production API URL - CRITICAL for WebSocket and API calls
-          # Frontend on Amplify (summit.codingeverest.com) calls backend on EC2 (www.codingeverest.com/summit)
-          export VITE_SERVER_URL=https://www.codingeverest.com/summit
+          # Frontend on Amplify (summit.codingeverest.com) calls backend on EC2 (api.codingeverest.com)
+          export VITE_SERVER_URL=https://api.codingeverest.com
           echo "✅ VITE_SERVER_URL set to: $VITE_SERVER_URL"
-          echo "✅ Frontend (summit.codingeverest.com) will call backend at www.codingeverest.com/summit"
+          echo "✅ Frontend (summit.codingeverest.com) will call backend at api.codingeverest.com"
           echo "🔍 Verifying VITE_SERVER_URL is set: $VITE_SERVER_URL"
           # Force cache bust - add timestamp to ensure fresh build
           export BUILD_TIMESTAMP=$(date +%s)
