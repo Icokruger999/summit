@@ -853,14 +853,14 @@ export default function MessageThreadSimple({
                   >
                 <div className={`relative max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
                   isOwnMessage
-                    ? "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
-                    : "bg-gray-100 text-gray-900"
+                    ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                    : "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
                 }`}>
                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                     {message.content}
                   </p>
                   <div className={`flex items-center gap-1 text-xs mt-2 ${
-                    isOwnMessage ? "text-blue-100" : "text-gray-400"
+                    isOwnMessage ? "text-green-100" : "text-blue-100"
                   }`}>
                     <span>{formatTime(message.timestamp)}</span>
                     {isOwnMessage && message.status && (
@@ -875,7 +875,7 @@ export default function MessageThreadSimple({
                           <CheckCheck className="w-3 h-3 inline" />
                         )}
                         {message.status === "read" && (
-                          <CheckCheck className="w-3 h-3 inline text-blue-200" />
+                          <CheckCheck className="w-3 h-3 inline text-green-200" />
                         )}
                         {message.status === "failed" && (
                           <X className="w-3 h-3 inline text-red-200" />

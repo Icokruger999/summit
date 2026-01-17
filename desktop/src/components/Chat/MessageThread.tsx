@@ -728,8 +728,8 @@ export default function MessageThread({
               >
                 <div className={`relative max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
                   message.senderId === userId
-                    ? "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
-                    : "bg-white text-gray-900 border border-gray-200"
+                    ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                    : "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
                 }`}>
                   {message.senderId !== userId && chat?.type === "group" && (
                     <div className="flex items-center gap-2 mb-2">
@@ -748,7 +748,7 @@ export default function MessageThread({
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-2 hover:underline ${
-                          message.senderId === userId ? "text-blue-100" : "text-blue-600"
+                          message.senderId === userId ? "text-green-100" : "text-blue-100"
                         }`}
                       >
                         <Paperclip className="w-4 h-4" />
@@ -759,7 +759,7 @@ export default function MessageThread({
                     )}
                   </div>
                   <div className={`flex items-center gap-1 text-xs mt-2 ${
-                    message.senderId === userId ? "text-blue-100" : "text-gray-400"
+                    message.senderId === userId ? "text-green-100" : "text-blue-100"
                   }`}>
                     <span>{formatTime(message.timestamp)}</span>
                     {/* Message status indicators for sent messages */}
