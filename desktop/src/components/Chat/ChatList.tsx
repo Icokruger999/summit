@@ -73,17 +73,20 @@ export default function ChatList({
       // For direct chats, we need to create the frontend chatId format: "direct-{userId1}-{userId2}"
       const formattedChats: Chat[] = (chatsData || []).map((chat: any) => {
         let frontendChatId = chat.id; // Default to database ID
+        let chatName = chat.name || "Chat";
         
         // For direct chats, convert to frontend format for LiveKit compatibility
         if (chat.type === "direct" && chat.other_user) {
           const userIds = [userId, chat.other_user.id].sort();
           frontendChatId = `direct-${userIds[0]}-${userIds[1]}`;
+          // Use the other user's name as the chat name for direct chats
+          chatName = chat.other_user_name || chat.other_user.name || chat.other_user_email || "User";
         }
         
         return {
           id: frontendChatId, // Use frontend format for selection
           dbId: chat.id, // Keep database ID for API calls
-          name: chat.name || "Chat",
+          name: chatName, // Use other user's name for direct chats
           type: chat.type,
           last_message: chat.last_message,
           last_message_at: chat.last_message_at,
