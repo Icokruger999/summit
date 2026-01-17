@@ -8,6 +8,10 @@ interface SubscriptionLockScreenProps {
 }
 
 export default function SubscriptionLockScreen({ userId }: SubscriptionLockScreenProps) {
+  // TEMPORARILY DISABLED - Skip subscription check for now
+  return null;
+  
+  /* ORIGINAL CODE - COMMENTED OUT
   const [showModal, setShowModal] = useState(false);
   const [status, setStatus] = useState<'trial' | 'active' | 'expired' | 'locked'>('trial');
 
@@ -38,6 +42,7 @@ export default function SubscriptionLockScreen({ userId }: SubscriptionLockScree
   if (status === 'active' || (status === 'trial')) {
     return null;
   }
+  */
 
   return (
     <>
