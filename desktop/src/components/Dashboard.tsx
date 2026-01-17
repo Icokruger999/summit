@@ -238,8 +238,6 @@ export default function Dashboard({ user }: DashboardProps) {
   // Global WebSocket connection for real-time message notifications
   useMessageWebSocket({
     userId: user?.id || null,
-    onChatRequestAccepted: handleChatRequestAccepted,
-    onChatRequestDeclined: handleChatRequestDeclined,
     onNewMessage: (notification: any) => {
       console.log("📨 Global WebSocket received message:", notification);
       
