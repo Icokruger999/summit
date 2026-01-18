@@ -49,45 +49,6 @@ export default function MessageThreadSimple({
   const lastEnterPressRef = useRef<number>(0);
   const [otherUserPresence, setOtherUserPresence] = useState<"online" | "offline" | "away" | "busy" | "dnd">("online");
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
-  const [myStatus, setMyStatus] = useState<"online" | "offline" | "away" | "busy" | "dnd">("online");
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close status dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-        setShowStatusDropdown(false);
-      }
-    };
-
-    if (showStatusDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showStatusDropdown]);
-
-  // Fetch my current status
-  useEffect(() => {
-    presenceApi.get(userId)
-      .then((presenceData: any) => {
-        setMyStatus(presenceData?.status || "online");
-      })
-      .catch((error) => {
-        console.error("Error fetching my status:", error);
-      });
-  }, [userId]);
-
-  // Update my status
-  const updateMyStatus = async (newStatus: "online" | "offline" | "away" | "busy" | "dnd") => {
-    try {
-      await presenceApi.update(newStatus);
-      setMyStatus(newStatus);
-      setShowStatusDropdown(false);
-    } catch (error) {
-      console.error("Error updating status:", error);
-    }
-  };
 
   // Handle real-time message notifications
   const handleNewMessage = useCallback(async (notification: any) => {
@@ -934,73 +895,7 @@ export default function MessageThreadSimple({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* My Status Dropdown */}
-            <div className="relative" ref={statusDropdownRef}>
-              <button
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-all"
-              >
-                <Circle className={`w-3 h-3 ${
-                  myStatus === "online" ? "fill-green-500 text-green-500" :
-                  myStatus === "away" ? "fill-yellow-500 text-yellow-500" :
-                  myStatus === "busy" || myStatus === "dnd" ? "fill-red-500 text-red-500" :
-                  "fill-gray-400 text-gray-400"
-                }`} />
-                <span className="text-sm font-medium text-gray-700 capitalize">{myStatus}</span>
-              </button>
-              
-              {showStatusDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button
-                    onClick={() => updateMyStatus("online")}
-                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors flex items-center gap-2 ${
-                      myStatus === "online" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <Circle className="w-3 h-3 fill-green-500 text-green-500" />
-                    <span className="text-sm font-medium">Online</span>
-                  </button>
-                  <button
-                    onClick={() => updateMyStatus("away")}
-                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors flex items-center gap-2 ${
-                      myStatus === "away" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <Circle className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                    <span className="text-sm font-medium">Away</span>
-                  </button>
-                  <button
-                    onClick={() => updateMyStatus("busy")}
-                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors flex items-center gap-2 ${
-                      myStatus === "busy" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <Circle className="w-3 h-3 fill-red-500 text-red-500" />
-                    <span className="text-sm font-medium">Busy</span>
-                  </button>
-                  <button
-                    onClick={() => updateMyStatus("dnd")}
-                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors flex items-center gap-2 ${
-                      myStatus === "dnd" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <Circle className="w-3 h-3 fill-red-500 text-red-500" />
-                    <span className="text-sm font-medium">Do not disturb</span>
-                  </button>
-                  <button
-                    onClick={() => updateMyStatus("offline")}
-                    className={`w-full px-3 py-2 text-left rounded-lg transition-colors flex items-center gap-2 ${
-                      myStatus === "offline" ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <Circle className="w-3 h-3 fill-gray-400 text-gray-400" />
-                    <span className="text-sm font-medium">Offline</span>
-                  </button>
-                </div>
-              )}
-            </div>
-            
+          <div className="flex gap-2">
             <button
               onClick={() => onStartCall(`chat-${chatId}`, "audio")}
               className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
