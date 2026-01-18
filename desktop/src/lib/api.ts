@@ -231,6 +231,14 @@ export const presenceApi = {
     });
   },
 
+  // Alias for updateStatus
+  update: async (status: "online" | "offline" | "away" | "busy" | "dnd") => {
+    return apiRequest<{ success: boolean }>("/api/presence", {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  },
+
   getBatch: async (userIds: string[]) => {
     return apiRequest<any[]>("/api/presence/batch", {
       method: "POST",
