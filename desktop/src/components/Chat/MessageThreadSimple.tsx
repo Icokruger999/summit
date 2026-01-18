@@ -851,7 +851,7 @@ export default function MessageThreadSimple({
                     key={message.id}
                     className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} mb-4`}
                   >
-                    <div className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"} max-w-xs lg:max-w-md`}>
+                    <div className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"} w-full max-w-md`}>
                       {/* Sender name */}
                       <span className={`text-xs font-medium mb-1 px-2 ${
                         isOwnMessage ? "text-green-600" : "text-blue-600"
