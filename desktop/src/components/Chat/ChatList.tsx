@@ -76,11 +76,11 @@ export default function ChatList({
         let chatName = chat.name || "Chat";
         
         // For direct chats, convert to frontend format for LiveKit compatibility
-        if (chat.type === "direct" && chat.other_user) {
-          const userIds = [userId, chat.other_user.id].sort();
+        if (chat.type === "direct" && chat.other_user_id) {
+          const userIds = [userId, chat.other_user_id].sort();
           frontendChatId = `direct-${userIds[0]}-${userIds[1]}`;
           // Use the other user's name as the chat name for direct chats
-          chatName = chat.other_user_name || chat.other_user.name || chat.other_user_email || "User";
+          chatName = chat.other_user_name || chat.other_user_email || "User";
         }
         
         return {
@@ -91,7 +91,7 @@ export default function ChatList({
           last_message: chat.last_message,
           last_message_at: chat.last_message_at,
           last_message_sender_id: chat.last_message_sender_id, // Who sent the last message
-          userIds: chat.type === "direct" && chat.other_user ? [chat.other_user.id] : undefined,
+          userIds: chat.type === "direct" && chat.other_user_id ? [chat.other_user_id] : undefined,
         };
       });
       
