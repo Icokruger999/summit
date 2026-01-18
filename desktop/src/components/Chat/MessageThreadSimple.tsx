@@ -1033,6 +1033,16 @@ export default function MessageThreadSimple({
               .filter((message) => message && message.id && message.content) // Filter out invalid messages
               .map((message) => {
                 const isOwnMessage = message.senderId === userId;
+                // Get initials for profile picture
+                const getInitials = (name: string) => {
+                  if (name === "You") return "Y";
+                  const parts = name.split(" ");
+                  if (parts.length >= 2) {
+                    return (parts[0][0] + parts[1][0]).toUpperCase();
+                  }
+                  return name.substring(0, 2).toUpperCase();
+                };
+                
                 return (
                   <div
                     key={message.id}
@@ -1045,7 +1055,7 @@ export default function MessageThreadSimple({
                           ? "bg-gradient-to-br from-blue-400 to-sky-500" 
                           : "bg-gradient-to-br from-orange-400 to-amber-500"
                       }`}>
-                        {(isOwnMessage ? "You" : message.senderName).substring(0, 2).toUpperCase()}
+                        {getInitials(isOwnMessage ? "You" : message.senderName)}
                       </div>
                     </div>
                     <div className="flex flex-col items-start flex-1 max-w-md">
