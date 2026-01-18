@@ -405,8 +405,8 @@ export default function MessageThreadSimple({
                   .map((msg: any) => {
                     const formatted = {
                       id: msg.id,
-                      senderId: msg.senderId,
-                      senderName: msg.senderName || msg.sender_email || "Unknown",
+                      senderId: msg.sender_id || msg.senderId,
+                      senderName: msg.sender_name || msg.senderName || msg.sender_email || "Unknown",
                       content: msg.content || "",
                       timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
                       type: (msg.type || "text") as "text" | "file",
