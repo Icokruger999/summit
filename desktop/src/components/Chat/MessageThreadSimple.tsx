@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Phone, Video, Clock, Check, CheckCheck, X } from "lucide-react";
-import { messagesApi, chatsApi } from "../../lib/api";
+import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle } from "lucide-react";
+import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
 import { messageCache } from "../../lib/cache";
@@ -23,6 +23,8 @@ interface MessageThreadSimpleProps {
     name: string;
     type: "direct" | "group";
     dbId?: string; // Database UUID (for API calls)
+    other_user_id?: string;
+    other_user_name?: string;
   };
   onStartCall: (roomName: string, callType?: "audio" | "video") => void;
   onMessageSent?: (chatId: string, message: string, timestamp: Date) => void;
@@ -45,6 +47,8 @@ export default function MessageThreadSimple({
   const lastTypingSentRef = useRef<number>(0);
   const isSendingMessageRef = useRef<boolean>(false);
   const lastEnterPressRef = useRef<number>(0);
+  const [otherUserPresence, setOtherUserPresence] = useState<"online" | "offline" | "away" | "busy" | "dnd">("online");
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
 
   // Handle real-time message notifications
   const handleNewMessage = useCallback(async (notification: any) => {
@@ -280,6 +284,58 @@ export default function MessageThreadSimple({
       console.log(`📊 Sample message:`, messages[0]);
     }
   }, [messages, chatId]);
+
+  // Fetch other user's presence status for direct chats
+  useEffect(() => {
+    if (!chat || chat.type !== "direct") {
+      setOtherUserPresence("online");
+      return;
+    }
+
+    // Get other user ID from chat prop or extract from chatId
+    let otherUserIdToFetch = chat.other_user_id || null;
+    
+    if (!otherUserIdToFetch && chatId.startsWith("direct-")) {
+      const withoutPrefix = chatId.replace("direct-", "");
+      const uuid1Match = withoutPrefix.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (uuid1Match) {
+        const uuid1 = uuid1Match[1];
+        const remaining = withoutPrefix.substring(uuid1.length + 1);
+        const uuid2Match = remaining.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+        if (uuid2Match) {
+          const uuid2 = uuid2Match[1];
+          otherUserIdToFetch = uuid1 === userId ? uuid2 : uuid1;
+        }
+      }
+    }
+
+    if (otherUserIdToFetch) {
+      setOtherUserId(otherUserIdToFetch);
+      
+      // Fetch presence immediately
+      presenceApi.get(otherUserIdToFetch)
+        .then((presenceData: any) => {
+          setOtherUserPresence(presenceData?.status || "online");
+        })
+        .catch((error) => {
+          console.error("Error fetching presence:", error);
+          setOtherUserPresence("online"); // Default to online
+        });
+
+      // Poll presence every 30 seconds
+      const interval = setInterval(() => {
+        presenceApi.get(otherUserIdToFetch!)
+          .then((presenceData: any) => {
+            setOtherUserPresence(presenceData?.status || "online");
+          })
+          .catch((error) => {
+            console.error("Error fetching presence:", error);
+          });
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [chatId, chat, userId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -810,8 +866,34 @@ export default function MessageThreadSimple({
       {/* Chat Header */}
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-sky-50">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg">{chat?.name || "Chat"}</h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              {/* Profile picture placeholder */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-sky-500 flex items-center justify-center text-white font-semibold">
+                {(chat?.name || chat?.other_user_name || "C").substring(0, 2).toUpperCase()}
+              </div>
+              {/* Online status indicator */}
+              {chat?.type === "direct" && (
+                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                  otherUserPresence === "online" ? "bg-green-500" :
+                  otherUserPresence === "away" ? "bg-yellow-500" :
+                  otherUserPresence === "busy" || otherUserPresence === "dnd" ? "bg-red-500" :
+                  "bg-gray-400"
+                }`}></div>
+              )}
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">{chat?.name || chat?.other_user_name || "Chat"}</h3>
+              {chat?.type === "direct" && (
+                <p className="text-xs text-gray-500">
+                  {otherUserPresence === "online" ? "Online" :
+                   otherUserPresence === "away" ? "Away" :
+                   otherUserPresence === "busy" ? "Busy" :
+                   otherUserPresence === "dnd" ? "Do not disturb" :
+                   "Offline"}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -851,7 +933,17 @@ export default function MessageThreadSimple({
                     key={message.id}
                     className="flex justify-start mb-4"
                   >
-                    <div className="flex flex-col items-start w-full max-w-md">
+                    {/* Profile picture */}
+                    <div className="flex-shrink-0 mr-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
+                        isOwnMessage 
+                          ? "bg-gradient-to-br from-blue-400 to-sky-500" 
+                          : "bg-gradient-to-br from-orange-400 to-amber-500"
+                      }`}>
+                        {(isOwnMessage ? "You" : message.senderName).substring(0, 2).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-start flex-1 max-w-md">
                       {/* Sender name and timestamp */}
                       <div className="flex items-center gap-2 mb-1 px-2">
                         <span className="text-xs font-medium text-gray-700">
