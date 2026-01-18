@@ -239,11 +239,17 @@ export default function ChatList({
         const presenceData = await presenceApi.getBatch(userIdsToCheck);
         const newPresenceMap: Record<string, "online" | "offline" | "away" | "busy" | "dnd"> = {};
         presenceData.forEach((p: any) => {
-          newPresenceMap[p.user_id] = p.status || "offline";
+          newPresenceMap[p.user_id] = p.status || "online"; // Default to online instead of offline
         });
         setPresenceMap(newPresenceMap);
       } catch (error) {
         console.error("Error fetching presence:", error);
+        // If presence API fails, assume users are online (since WebSocket is working)
+        const newPresenceMap: Record<string, "online" | "offline" | "away" | "busy" | "dnd"> = {};
+        userIdsToCheck.forEach(userId => {
+          newPresenceMap[userId] = "online";
+        });
+        setPresenceMap(newPresenceMap);
       }
     };
 
