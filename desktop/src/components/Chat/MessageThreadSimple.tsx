@@ -851,42 +851,51 @@ export default function MessageThreadSimple({
                     key={message.id}
                     className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} mb-4`}
                   >
-                <div className={`relative max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
-                  isOwnMessage
-                    ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
-                    : "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
-                }`}>
-                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                    {message.content}
-                  </p>
-                  <div className={`flex items-center gap-1 text-xs mt-2 ${
-                    isOwnMessage ? "text-green-100" : "text-blue-100"
-                  }`}>
-                    <span>{formatTime(message.timestamp)}</span>
-                    {isOwnMessage && message.status && (
-                      <span className="ml-1">
-                        {message.status === "sending" && (
-                          <Clock className="w-3 h-3 inline animate-pulse" />
-                        )}
-                        {message.status === "sent" && (
-                          <Check className="w-3 h-3 inline" />
-                        )}
-                        {message.status === "received" && (
-                          <CheckCheck className="w-3 h-3 inline" />
-                        )}
-                        {message.status === "read" && (
-                          <CheckCheck className="w-3 h-3 inline text-green-200" />
-                        )}
-                        {message.status === "failed" && (
-                          <X className="w-3 h-3 inline text-red-200" />
-                        )}
+                    <div className={`flex flex-col ${isOwnMessage ? "items-end" : "items-start"} max-w-xs lg:max-w-md`}>
+                      {/* Sender name */}
+                      <span className={`text-xs font-medium mb-1 px-2 ${
+                        isOwnMessage ? "text-green-600" : "text-blue-600"
+                      }`}>
+                        {isOwnMessage ? "You" : message.senderName}
                       </span>
-                    )}
+                      {/* Message bubble */}
+                      <div className={`relative px-4 py-3 rounded-2xl shadow-sm ${
+                        isOwnMessage
+                          ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                          : "bg-gradient-to-br from-blue-500 to-sky-600 text-white"
+                      }`}>
+                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                        <div className={`flex items-center gap-1 text-xs mt-2 ${
+                          isOwnMessage ? "text-green-100" : "text-blue-100"
+                        }`}>
+                          <span>{formatTime(message.timestamp)}</span>
+                          {isOwnMessage && message.status && (
+                            <span className="ml-1">
+                              {message.status === "sending" && (
+                                <Clock className="w-3 h-3 inline animate-pulse" />
+                              )}
+                              {message.status === "sent" && (
+                                <Check className="w-3 h-3 inline" />
+                              )}
+                              {message.status === "received" && (
+                                <CheckCheck className="w-3 h-3 inline" />
+                              )}
+                              {message.status === "read" && (
+                                <CheckCheck className="w-3 h-3 inline text-green-200" />
+                              )}
+                              {message.status === "failed" && (
+                                <X className="w-3 h-3 inline text-red-200" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-            })}
+                );
+              })}
           <div ref={messagesEndRef} />
           {/* Typing Indicator */}
           {Object.keys(typingUsers).length > 0 && (
