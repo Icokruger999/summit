@@ -1034,8 +1034,8 @@ export default function MessageThreadSimple({
               .map((message) => {
                 const isOwnMessage = message.senderId === userId;
                 // Get initials for profile picture
-                const getInitials = (name: string) => {
-                  if (name === "You") return "Y";
+                const getInitials = (name: string, isOwn: boolean) => {
+                  if (isOwn) return "You";
                   const parts = name.split(" ");
                   if (parts.length >= 2) {
                     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -1050,12 +1050,12 @@ export default function MessageThreadSimple({
                   >
                     {/* Profile picture */}
                     <div className="flex-shrink-0 mr-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold ${
                         isOwnMessage 
-                          ? "bg-gradient-to-br from-blue-400 to-sky-500" 
-                          : "bg-gradient-to-br from-orange-400 to-amber-500"
+                          ? "bg-gradient-to-br from-blue-400 to-sky-500 text-[9px]" 
+                          : "bg-gradient-to-br from-orange-400 to-amber-500 text-xs"
                       }`}>
-                        {getInitials(isOwnMessage ? "You" : message.senderName)}
+                        {getInitials(message.senderName, isOwnMessage)}
                       </div>
                     </div>
                     <div className="flex flex-col items-start flex-1 max-w-md">
