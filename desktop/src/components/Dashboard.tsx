@@ -648,6 +648,57 @@ export default function Dashboard({ user }: DashboardProps) {
                 </h1>
                 <p className="text-xs text-gray-500">by Coding Everest</p>
               </div>
+              
+              {/* Status Dropdown in Header */}
+              <div className="relative ml-6" ref={statusDropdownRef}>
+                <button
+                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Circle 
+                    className={`w-3 h-3 ${
+                      currentStatus === "online" ? "text-green-500 fill-green-500" :
+                      currentStatus === "busy" ? "text-yellow-500 fill-yellow-500" :
+                      currentStatus === "away" ? "text-orange-500 fill-orange-500" :
+                      currentStatus === "dnd" ? "text-red-500 fill-red-500" :
+                      "text-gray-400 fill-gray-400"
+                    }`}
+                  />
+                  <span className="text-sm font-medium text-gray-700 capitalize">
+                    {currentStatus === "dnd" ? "Do Not Disturb" : currentStatus}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+                
+                {showStatusDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    {[
+                      { status: "online", label: "Online", color: "text-green-500 fill-green-500" },
+                      { status: "away", label: "Away", color: "text-orange-500 fill-orange-500" },
+                      { status: "busy", label: "Busy", color: "text-yellow-500 fill-yellow-500" },
+                      { status: "dnd", label: "Do Not Disturb", color: "text-red-500 fill-red-500" },
+                      { status: "offline", label: "Offline", color: "text-gray-400 fill-gray-400" },
+                    ].map(({ status, label, color }) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          updateStatus(status);
+                          localStorage.setItem("status_manually_set", "true");
+                          setShowStatusDropdown(false);
+                          refetchPresence();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        <Circle className={`w-3 h-3 ${color}`} />
+                        <span className="text-sm font-medium text-gray-700">{label}</span>
+                        {currentStatus === status && (
+                          <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           <div className="flex items-center gap-4">
             {/* User Email */}
