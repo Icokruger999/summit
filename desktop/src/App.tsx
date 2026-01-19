@@ -9,6 +9,7 @@ import PermissionsRequest from "./components/PermissionsRequest";
 import FirstLoginPopup from "./components/FirstLoginPopup";
 import PasswordChange from "./components/PasswordChange";
 import { authApi, getAuthToken } from "./lib/api";
+import { requestNotificationPermission } from "./lib/notifications";
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -101,6 +102,9 @@ function App() {
               setShowFirstLoginPopup(true);
             } else if (!permissionsRequested) {
               setShowPermissionsRequest(true);
+            } else {
+              // Request notification permission after login
+              requestNotificationPermission();
             }
           })
           .catch((error) => {

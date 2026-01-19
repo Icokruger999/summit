@@ -21,6 +21,7 @@ import { useMessageWebSocket } from "../hooks/useMessageWebSocket";
 import SubscriptionLockScreen from "./Subscription/SubscriptionLockScreen";
 import TrialBanner from "./Subscription/TrialBanner";
 import SubscriptionModal from "./Subscription/SubscriptionModal";
+import { showMessageNotification, showCallNotification } from "../lib/notifications";
 
 interface DashboardProps {
   user: any;
@@ -168,6 +169,31 @@ export default function Dashboard({ user }: DashboardProps) {
   // Get current status (default to online if not set)
   const currentStatus = presence?.status || "online";
 
+  // Listen for incoming call notifications
+  useEffect(() => {
+    const handleIncomingCall = (event: CustomEvent<any>) => {
+      const { callerId, callerName, callType } = event.detail;
+      
+      // Show desktop notification for incoming call
+      const notification = showCallNotification(callerName || "Someone", callType || "video");
+      
+      // Set up call state
+      setCallingUser(callerName || "Someone");
+      setCallType(callType || "video");
+      setIsCalling(true);
+      
+      // Auto-dismiss notification after 30 seconds
+      setTimeout(() => {
+        if (notification) notification.close();
+      }, 30000);
+    };
+
+    window.addEventListener('incomingCall' as any, handleIncomingCall as EventListener);
+    return () => {
+      window.removeEventListener('incomingCall' as any, handleIncomingCall as EventListener);
+    };
+  }, []);
+
   // Handle chat request accepted notification
   const handleChatRequestAccepted = (data: any) => {
     const requesteeName = data.requesteeName || "Someone";
@@ -287,12 +313,13 @@ export default function Dashboard({ user }: DashboardProps) {
         const messageChat = chats.find((c) => c.id === notification.chatId || c.dbId === notification.chatId);
         if (messageChat && selectedChat !== messageChat.id) {
           sounds.messageReceived();
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(messageChat.name || "New Message", {
-              body: notification.content,
-              icon: new URL("../assets/icon.png", import.meta.url).href,
-            });
-          }
+          
+          // Show desktop notification
+          showMessageNotification(
+            messageChat.name || "Someone",
+            notification.content,
+            notification.chatId
+          );
         }
       }
     },
