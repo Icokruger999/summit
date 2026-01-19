@@ -421,9 +421,18 @@ export default function Dashboard({ user }: DashboardProps) {
 
           {/* Call Controls */}
           <div className="flex flex-col items-center gap-6">
-            {/* Cancel Button */}
+            {/* Cancel Button - Always visible during call setup */}
             <button
               onClick={() => {
+                // Cancel call on both sides via WebSocket
+                if (callRoom) {
+                  // Send cancel notification to other user
+                  const cancelEvent = new CustomEvent('callCancelled', {
+                    detail: { roomName: callRoom, cancelledBy: user?.id }
+                  });
+                  window.dispatchEvent(cancelEvent);
+                }
+                
                 if (callTimeoutRef.current) {
                   clearTimeout(callTimeoutRef.current);
                 }
