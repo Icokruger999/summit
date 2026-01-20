@@ -222,24 +222,31 @@ export function useChime(onConnected?: () => void) {
 
       meetingSession.audioVideo.addObserver(observer);
       
+      // Store our own attendee ID for filtering
+      const myAttendeeId = attendeeData.AttendeeId;
+      console.log("My attendee ID:", myAttendeeId);
+      
       // Subscribe to attendee presence changes
       meetingSession.audioVideo.realtimeSubscribeToAttendeeIdPresence(
         (attendeeId: string, present: boolean, externalUserId?: string) => {
-          console.log("Attendee presence changed:", attendeeId, "present:", present, "externalUserId:", externalUserId);
+          console.log("👥 Attendee presence changed:", attendeeId, "present:", present, "externalUserId:", externalUserId, "isMe:", attendeeId === myAttendeeId);
+          
+          // Don't add ourselves
+          if (attendeeId === myAttendeeId) {
+            console.log("Skipping self attendee");
+            return;
+          }
           
           if (present) {
             // Attendee joined
             setRemoteAttendees((prev) => {
               const newMap = new Map(prev);
-              // Don't add ourselves
-              if (attendeeId !== attendeeData.AttendeeId) {
-                newMap.set(attendeeId, {
-                  attendeeId,
-                  externalUserId: externalUserId || "",
-                  hasVideo: false,
-                });
-                console.log("Remote attendee joined:", attendeeId, "Total:", newMap.size);
-              }
+              newMap.set(attendeeId, {
+                attendeeId,
+                externalUserId: externalUserId || "",
+                hasVideo: false,
+              });
+              console.log("✅ Remote attendee joined:", attendeeId, "Total remote:", newMap.size);
               return newMap;
             });
           } else {
@@ -247,8 +254,35 @@ export function useChime(onConnected?: () => void) {
             setRemoteAttendees((prev) => {
               const newMap = new Map(prev);
               newMap.delete(attendeeId);
-              console.log("Remote attendee left:", attendeeId, "Total:", newMap.size);
+              console.log("❌ Remote attendee left:", attendeeId, "Total remote:", newMap.size);
               return newMap;
+            });
+          }
+        }
+      );
+      
+      // Also subscribe to volume indicator to detect attendees (backup method)
+      meetingSession.audioVideo.realtimeSubscribeToVolumeIndicator(
+        (attendeeId: string, volume: number | null, muted: boolean | null, signalStrength: number | null) => {
+          // Only log occasionally to avoid spam
+          if (volume && volume > 0) {
+            console.log("🔊 Volume from attendee:", attendeeId, "volume:", volume);
+          }
+          
+          // If we detect volume from someone else, make sure they're in our attendees list
+          if (attendeeId !== myAttendeeId) {
+            setRemoteAttendees((prev) => {
+              if (!prev.has(attendeeId)) {
+                const newMap = new Map(prev);
+                newMap.set(attendeeId, {
+                  attendeeId,
+                  externalUserId: "",
+                  hasVideo: false,
+                });
+                console.log("✅ Added attendee via volume indicator:", attendeeId);
+                return newMap;
+              }
+              return prev;
             });
           }
         }

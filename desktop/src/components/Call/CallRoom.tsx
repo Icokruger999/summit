@@ -144,19 +144,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
             >
               {!audioEnabled ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
-            {callType === "video" && (
-              <button
-                onClick={toggleVideo}
-                className={`p-4 rounded-full transition-all ${
-                  !videoEnabled
-                    ? "bg-red-600 text-white hover:bg-red-700"
-                    : "bg-white/20 text-white hover:bg-white/30"
-                }`}
-                title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
-              >
-                {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-              </button>
-            )}
+            <button
+              onClick={toggleVideo}
+              className={`p-4 rounded-full transition-all ${
+                !videoEnabled
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+              title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
+            >
+              {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            </button>
             <div className="w-px h-10 bg-white/20 mx-2"></div>
             <button
               onClick={handleLeave}
@@ -287,19 +285,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
           >
             {!audioEnabled ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
-          {callType === "video" && (
-            <button
-              onClick={toggleVideo}
-              className={`p-4 rounded-full transition-all ${
-                !videoEnabled
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
-              title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
-            >
-              {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-            </button>
-          )}
+          <button
+            onClick={toggleVideo}
+            className={`p-4 rounded-full transition-all ${
+              !videoEnabled
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+            title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
+          >
+            {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+          </button>
           <div className="w-px h-10 bg-white/20 mx-2"></div>
           <button
             onClick={handleLeave}
