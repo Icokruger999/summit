@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2 } from "lucide-react";
+import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2, UserPlus } from "lucide-react";
 import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
@@ -56,6 +56,10 @@ export default function MessageThreadSimple({
   const [editingContent, setEditingContent] = useState("");
   const [messageMenuOpen, setMessageMenuOpen] = useState<string | null>(null);
   const messageMenuRef = useRef<HTMLDivElement>(null);
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
+  const [editingChatName, setEditingChatName] = useState(false);
+  const [newChatName, setNewChatName] = useState("");
+  const chatMenuRef = useRef<HTMLDivElement>(null);
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -66,13 +70,16 @@ export default function MessageThreadSimple({
       if (messageMenuRef.current && !messageMenuRef.current.contains(event.target as Node)) {
         setMessageMenuOpen(null);
       }
+      if (chatMenuRef.current && !chatMenuRef.current.contains(event.target as Node)) {
+        setChatMenuOpen(false);
+      }
     };
 
-    if (showStatusDropdown || messageMenuOpen) {
+    if (showStatusDropdown || messageMenuOpen || chatMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [showStatusDropdown, messageMenuOpen]);
+  }, [showStatusDropdown, messageMenuOpen, chatMenuOpen]);
 
   // Fetch my current status
   useEffect(() => {
@@ -944,6 +951,47 @@ export default function MessageThreadSimple({
     }
   };
 
+  // Handle rename group chat
+  const handleRenameChat = async () => {
+    if (!newChatName.trim() || !dbChatId) return;
+
+    try {
+      await chatsApi.updateGroupName(dbChatId, newChatName.trim());
+      
+      // Update local state
+      if (chat) {
+        chat.name = newChatName.trim();
+      }
+      
+      setEditingChatName(false);
+      setNewChatName("");
+      setChatMenuOpen(false);
+      
+      // Notify parent to update chat list
+      window.dispatchEvent(new CustomEvent('chatUpdated', { 
+        detail: { chatId: dbChatId, name: newChatName.trim() } 
+      }));
+    } catch (error) {
+      console.error("Error renaming chat:", error);
+    }
+  };
+
+  // Handle delete/leave chat
+  const handleDeleteChat = async () => {
+    if (!dbChatId) return;
+
+    try {
+      await chatsApi.deleteChat(dbChatId);
+      
+      // Notify parent to remove chat from list
+      window.dispatchEvent(new CustomEvent('chatDeleted', { 
+        detail: { chatId: dbChatId } 
+      }));
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Chat Header */}
@@ -992,8 +1040,71 @@ export default function MessageThreadSimple({
             >
               <Video className="w-4 h-4" />
             </button>
+            {/* 3-dot menu for group chats */}
+            {chat?.type === "group" && (
+              <div className="relative" ref={chatMenuRef}>
+                <button
+                  onClick={() => setChatMenuOpen(!chatMenuOpen)}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5 text-gray-600" />
+                </button>
+                {chatMenuOpen && (
+                  <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[180px]">
+                    <button
+                      onClick={() => {
+                        setNewChatName(chat.name || "");
+                        setEditingChatName(true);
+                        setChatMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Rename Group
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeleteChat();
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Leave Group
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
+        {/* Rename input */}
+        {editingChatName && (
+          <div className="mt-3 flex gap-2">
+            <input
+              type="text"
+              value={newChatName}
+              onChange={(e) => setNewChatName(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter new group name"
+              autoFocus
+            />
+            <button
+              onClick={handleRenameChat}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setEditingChatName(false);
+                setNewChatName("");
+              }}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
