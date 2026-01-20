@@ -183,20 +183,35 @@ export function useChime(onConnected?: () => void) {
 
       meetingSession.audioVideo.addObserver(observer);
 
-      // Start audio
+      // Start audio input (microphone)
       const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
+      console.log("Audio input devices:", audioInputDevices.length);
       if (audioInputDevices.length > 0) {
         await meetingSession.audioVideo.startAudioInput(audioInputDevices[0].deviceId);
+        console.log("Audio input started:", audioInputDevices[0].label);
+      } else {
+        console.warn("No audio input devices found");
       }
 
-      // Bind audio output
-      const audioOutputElement = document.getElementById("chime-audio-output") as HTMLAudioElement;
-      if (audioOutputElement) {
-        await meetingSession.audioVideo.bindAudioElement(audioOutputElement);
-      }
-
-      // Start the session
+      // Start the session FIRST (before binding audio output)
       meetingSession.audioVideo.start();
+      console.log("Meeting session started");
+
+      // Bind audio output AFTER session starts
+      // Wait a moment for the audio element to be ready
+      setTimeout(async () => {
+        const audioOutputElement = document.getElementById("chime-audio-output") as HTMLAudioElement;
+        if (audioOutputElement) {
+          try {
+            await meetingSession.audioVideo.bindAudioElement(audioOutputElement);
+            console.log("Audio output bound successfully");
+          } catch (audioError) {
+            console.error("Failed to bind audio output:", audioError);
+          }
+        } else {
+          console.error("Audio output element not found! Make sure <audio id='chime-audio-output'> exists");
+        }
+      }, 500);
       
       // Set connected state immediately
       setIsConnected(true);

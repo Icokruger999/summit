@@ -91,8 +91,8 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Hidden audio element for Chime audio output */}
-      <audio id="chime-audio-output" style={{ display: 'none' }} />
+      {/* Hidden audio element for Chime audio output - must have autoPlay */}
+      <audio id="chime-audio-output" autoPlay playsInline style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
 
       {/* Header */}
       <div className="px-6 py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
