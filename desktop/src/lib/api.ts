@@ -214,6 +214,13 @@ export const chatsApi = {
     });
   },
 
+  createGroupChat: async (name: string, memberIds: string[]) => {
+    return apiRequest<any>("/api/chats/group", {
+      method: "POST",
+      body: JSON.stringify({ name, memberIds }),
+    });
+  },
+
   updateLastMessage: async (chatId: string, lastMessage: string) => {
     return apiRequest<{ success: boolean }>(`/api/chats/${chatId}/last-message`, {
       method: "PATCH",

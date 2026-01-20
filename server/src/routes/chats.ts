@@ -196,5 +196,61 @@ router.patch("/:chatId/last-message", authenticate, async (req: AuthRequest, res
   }
 });
 
+// Create a group chat
+router.post("/group", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { name, memberIds } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Group name is required" });
+    }
+
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: "At least one member is required" });
+    }
+
+    // Include the creator in the members list
+    const allMemberIds = [userId, ...memberIds.filter((id: string) => id !== userId)];
+
+    console.log(`👥 Creating group chat "${name}" with ${allMemberIds.length} members`);
+
+    // Create the chat
+    const chatResult = await query(
+      `INSERT INTO chats (name, type, created_by)
+       VALUES ($1, 'group', $2)
+       RETURNING id, name, type, created_by, created_at, updated_at`,
+      [name.trim(), userId]
+    );
+
+    const chat = chatResult.rows[0];
+
+    // Add all participants
+    for (const memberId of allMemberIds) {
+      await query(
+        `INSERT INTO chat_participants (chat_id, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (chat_id, user_id) DO NOTHING`,
+        [chat.id, memberId]
+      );
+    }
+
+    console.log(`✅ Group chat created: ${chat.id}`);
+
+    res.json({
+      id: chat.id,
+      name: chat.name,
+      type: chat.type,
+      created_by: chat.created_by,
+      created_at: chat.created_at,
+      updated_at: chat.updated_at,
+      memberIds: allMemberIds,
+    });
+  } catch (error: any) {
+    console.error("Error creating group chat:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 

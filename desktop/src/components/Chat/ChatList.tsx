@@ -325,15 +325,36 @@ export default function ChatList({
         setChats((prev) => [...prev, newChat]);
         onSelectChat(newChat.id);
       }
-    } else {
-      // For group chats, create local chat (group chat support can be added later)
-      const newChat: Chat = {
-        id: `chat-${Date.now()}`,
-        name,
-        type,
-      };
-      setChats((prev) => [...prev, newChat]);
-      onSelectChat(newChat.id);
+    } else if (type === "group" && userIds.length > 0) {
+      // For group chats, create in database
+      try {
+        const { chatsApi } = await import("../../lib/api");
+        console.log(`👥 Creating group chat "${name}" with ${userIds.length} members`);
+        const chat = await chatsApi.createGroupChat(name, userIds);
+        console.log(`✅ Group chat created: ${chat.id}`);
+        
+        // Add to local state with database ID
+        const newChat: Chat = {
+          id: chat.id, // Use database ID directly for group chats
+          dbId: chat.id,
+          name: chat.name,
+          type: "group",
+          userIds: userIds,
+        };
+        setChats((prev) => {
+          const updated = [...prev, newChat];
+          chatCache.addChat(userId, newChat);
+          return updated;
+        });
+        onSelectChat(chat.id);
+        
+        // Notify that chat was created
+        window.dispatchEvent(new CustomEvent('chatCreated', { detail: { chatId: chat.id } }));
+      } catch (error) {
+        console.error("❌ Error creating group chat:", error);
+        // Show error to user
+        alert("Failed to create group chat. Please try again.");
+      }
     }
   };
 
