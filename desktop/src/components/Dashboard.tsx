@@ -887,10 +887,13 @@ export default function Dashboard({ user }: DashboardProps) {
                     // Extract recipient ID and name from chat
                     let recipientId: string | null = null;
                     let recipientName: string | null = null;
-                    if (chat.type === "direct" && chat.participants) {
-                      const otherUser = chat.participants.find((p: any) => p.id !== user.id);
-                      recipientId = otherUser?.id || null;
-                      recipientName = otherUser?.name || chat.name || chat.other_user_name || "User";
+                    
+                    if (chat.type === "direct") {
+                      // Try multiple ways to get the other user's ID
+                      recipientId = chat.other_user_id || 
+                                   (chat.userIds && chat.userIds[0]) || 
+                                   null;
+                      recipientName = chat.other_user_name || chat.name || "User";
                     } else {
                       recipientName = chat.name || "User";
                     }
@@ -918,6 +921,8 @@ export default function Dashboard({ user }: DashboardProps) {
                       } catch (error) {
                         console.error("Failed to send call notification:", error);
                       }
+                    } else {
+                      console.warn("⚠️ Could not find recipient ID for call notification");
                     }
 
                     // Show pre-call settings
