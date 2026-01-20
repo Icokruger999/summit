@@ -56,35 +56,59 @@ export function useChime() {
       const token = getAuthToken();
       if (!token) throw new Error("Not authenticated");
 
-      console.log("Creating Chime meeting for room:", roomName);
+      console.log("Checking for existing Chime meeting for room:", roomName);
 
-      // Create meeting
-      const meetingResponse = await fetch(`${SERVER_URL}/api/chime/meeting`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ chatId: roomName }),
-      });
+      // First, check if a meeting already exists for this room
+      let meetingData;
+      try {
+        const existingMeetingResponse = await fetch(`${SERVER_URL}/api/chime/meeting/${roomName}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!meetingResponse.ok) {
-        const error = await meetingResponse.json();
-        throw new Error(error.error || "Failed to create meeting");
+        if (existingMeetingResponse.ok) {
+          const { meeting: existingMeeting } = await existingMeetingResponse.json();
+          meetingData = existingMeeting;
+          console.log("Joining existing meeting:", meetingData.meetingId);
+        }
+      } catch (error) {
+        // Meeting doesn't exist, will create new one
+        console.log("No existing meeting found, creating new one");
       }
 
-      const { meeting: meetingData } = await meetingResponse.json();
-      setMeeting(meetingData);
-      console.log("Meeting created:", meetingData.MeetingId);
+      // If no existing meeting, create a new one
+      if (!meetingData) {
+        console.log("Creating new Chime meeting for room:", roomName);
+        const meetingResponse = await fetch(`${SERVER_URL}/api/chime/meeting`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ chatId: roomName }),
+        });
 
-      // Create attendee
+        if (!meetingResponse.ok) {
+          const error = await meetingResponse.json();
+          throw new Error(error.error || "Failed to create meeting");
+        }
+
+        const response = await meetingResponse.json();
+        meetingData = response.meeting;
+        console.log("Meeting created:", meetingData.MeetingId);
+      }
+
+      setMeeting(meetingData);
+
+      // Create attendee for this meeting
       const attendeeResponse = await fetch(`${SERVER_URL}/api/chime/attendee`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ meetingId: meetingData.MeetingId }),
+        body: JSON.stringify({ meetingId: meetingData.MeetingId || meetingData.meetingId }),
       });
 
       if (!attendeeResponse.ok) {
@@ -169,6 +193,14 @@ export function useChime() {
     isConnectingRef.current = false;
     
     if (meetingSessionRef.current) {
+      // Stop video input to turn off camera
+      try {
+        meetingSessionRef.current.audioVideo.stopVideoInput();
+        meetingSessionRef.current.audioVideo.stopLocalVideoTile();
+      } catch (error) {
+        console.error("Error stopping video:", error);
+      }
+      
       meetingSessionRef.current.audioVideo.stop();
       meetingSessionRef.current = null;
     }
@@ -191,6 +223,8 @@ export function useChime() {
     setAttendee(null);
     setIsConnected(false);
     setRemoteVideoTiles(new Map());
+    setVideoEnabled(false);
+    setAudioEnabled(true);
   }, [meeting]);
 
   const toggleAudio = useCallback(async () => {
