@@ -1130,9 +1130,7 @@ export default function MessageThreadSimple({
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (confirm("Delete this message?")) {
-                                      handleDeleteMessage(message.id);
-                                    }
+                                    handleDeleteMessage(message.id);
                                   }}
                                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
                                 >
