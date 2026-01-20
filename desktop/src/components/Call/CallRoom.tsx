@@ -27,22 +27,26 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
   } = useChime();
 
   const remoteVideoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+  const hasConnectedRef = useRef(false);
 
   useEffect(() => {
-    if (roomName) {
+    if (roomName && !hasConnectedRef.current) {
+      hasConnectedRef.current = true;
       setError(null);
       connect(roomName).then(() => {
         onConnected?.();
       }).catch((error) => {
         console.error("Failed to connect to Chime:", error);
         setError(`Failed to connect: ${error.message || "Unknown error"}`);
+        hasConnectedRef.current = false; // Allow retry on error
       });
     }
 
     return () => {
+      hasConnectedRef.current = false;
       disconnect();
     };
-  }, [roomName, connect, disconnect, onConnected]);
+  }, [roomName]); // Only depend on roomName
 
   // Bind remote video elements when tiles change
   useEffect(() => {
