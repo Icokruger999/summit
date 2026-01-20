@@ -262,31 +262,33 @@ export function useChime(onConnected?: () => void) {
       );
       
       // Also subscribe to volume indicator to detect attendees (backup method)
-      meetingSession.audioVideo.realtimeSubscribeToVolumeIndicator(
-        (attendeeId: string, volume: number | null, muted: boolean | null, signalStrength: number | null) => {
-          // Only log occasionally to avoid spam
-          if (volume && volume > 0) {
-            console.log("🔊 Volume from attendee:", attendeeId, "volume:", volume);
-          }
-          
-          // If we detect volume from someone else, make sure they're in our attendees list
-          if (attendeeId !== myAttendeeId) {
-            setRemoteAttendees((prev) => {
-              if (!prev.has(attendeeId)) {
-                const newMap = new Map(prev);
-                newMap.set(attendeeId, {
-                  attendeeId,
-                  externalUserId: "",
-                  hasVideo: false,
-                });
-                console.log("✅ Added attendee via volume indicator:", attendeeId);
-                return newMap;
-              }
-              return prev;
-            });
-          }
+      // Note: In Chime SDK, we subscribe to all attendees by passing the callback
+      const volumeCallback = (attendeeId: string, volume: number | null, muted: boolean | null, signalStrength: number | null) => {
+        // Only log occasionally to avoid spam
+        if (volume && volume > 0) {
+          console.log("🔊 Volume from attendee:", attendeeId, "volume:", volume);
         }
-      );
+        
+        // If we detect volume from someone else, make sure they're in our attendees list
+        if (attendeeId !== myAttendeeId) {
+          setRemoteAttendees((prev) => {
+            if (!prev.has(attendeeId)) {
+              const newMap = new Map(prev);
+              newMap.set(attendeeId, {
+                attendeeId,
+                externalUserId: "",
+                hasVideo: false,
+              });
+              console.log("✅ Added attendee via volume indicator:", attendeeId);
+              return newMap;
+            }
+            return prev;
+          });
+        }
+      };
+      
+      // Subscribe to volume for all attendees
+      meetingSession.audioVideo.realtimeSubscribeToVolumeIndicator(myAttendeeId, volumeCallback);
 
       // Start audio input (microphone)
       const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
@@ -320,12 +322,29 @@ export function useChime(onConnected?: () => void) {
         const audioOutputElement = document.getElementById("chime-audio-output") as HTMLAudioElement;
         if (audioOutputElement) {
           try {
-            // Resume AudioContext if it's suspended (browser autoplay policy)
-            if (audioOutputElement.paused) {
-              await audioOutputElement.play().catch(() => {
-                console.log("Audio autoplay blocked, will play on user interaction");
+            // Set up the audio element properly
+            audioOutputElement.autoplay = true;
+            audioOutputElement.muted = false;
+            
+            // Try to play (may be blocked by autoplay policy)
+            const playPromise = audioOutputElement.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((e) => {
+                console.log("Audio autoplay blocked, will play on user interaction:", e.message);
+                // Add a one-time click handler to resume audio
+                const resumeAudio = async () => {
+                  try {
+                    await audioOutputElement.play();
+                    console.log("Audio resumed after user interaction");
+                  } catch (err) {
+                    console.error("Failed to resume audio:", err);
+                  }
+                  document.removeEventListener("click", resumeAudio);
+                };
+                document.addEventListener("click", resumeAudio, { once: true });
               });
             }
+            
             await meetingSession.audioVideo.bindAudioElement(audioOutputElement);
             console.log("Audio output bound successfully");
           } catch (audioError) {

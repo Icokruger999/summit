@@ -19,6 +19,8 @@ interface Chat {
   userIds?: string[];
   unreadCount?: number;
   hasUnread?: boolean; // For bold styling
+  other_user_id?: string; // For direct chats
+  other_user_name?: string; // For direct chats
 }
 
 interface ChatListProps {
@@ -74,6 +76,8 @@ export default function ChatList({
       const formattedChats: Chat[] = (chatsData || []).map((chat: any) => {
         let frontendChatId = chat.id; // Default to database ID
         let chatName = chat.name || "Chat";
+        let otherUserName: string | undefined = undefined;
+        let otherUserId: string | undefined = undefined;
         
         // For direct chats, convert to frontend format for LiveKit compatibility
         if (chat.type === "direct" && chat.other_user_id) {
@@ -81,6 +85,8 @@ export default function ChatList({
           frontendChatId = `direct-${userIds[0]}-${userIds[1]}`;
           // Use the other user's name as the chat name for direct chats
           chatName = chat.other_user_name || chat.other_user_email || "User";
+          otherUserName = chat.other_user_name;
+          otherUserId = chat.other_user_id;
         }
         
         return {
@@ -92,6 +98,8 @@ export default function ChatList({
           last_message_at: chat.last_message_at,
           last_message_sender_id: chat.last_message_sender_id, // Who sent the last message
           userIds: chat.type === "direct" && chat.other_user_id ? [chat.other_user_id] : undefined,
+          other_user_id: otherUserId,
+          other_user_name: otherUserName,
         };
       });
       
