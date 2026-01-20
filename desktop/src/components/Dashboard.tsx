@@ -968,23 +968,12 @@ export default function Dashboard({ user }: DashboardProps) {
                       console.warn("⚠️ Could not find recipient ID for call notification");
                     }
 
-                    // Show "calling..." screen (don't join yet - wait for them to answer)
-                    setCallingUser(recipientName);
+                    // Caller joins immediately (no pre-call settings)
+                    setCallRoom(roomName);
                     setCallType(type);
-                    setPendingCallRoom(roomName);
-                    setPendingCallType(type);
-                    setIsCalling(true);
-                    
-                    // Auto-cancel after 60 seconds if no answer
-                    callTimeoutRef.current = setTimeout(() => {
-                      setIsCalling(false);
-                      setCallingUser(null);
-                      setPendingCallRoom(null);
-                      setNotification({
-                        message: "Call not answered",
-                        type: "info",
-                      });
-                    }, 60000);
+                    setInCall(true);
+                    updateStatus("busy");
+                    localStorage.setItem("status_manually_set", "false");
                   }}
                   onMessageSent={(chatId, message, timestamp) => {
                     // Message sent - ChatList will update via custom event
