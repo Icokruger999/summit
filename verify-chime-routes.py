@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check what the chats API returns"""
+"""Verify Chime routes are working"""
 
 import boto3
 import time
@@ -8,19 +8,15 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 check_cmd = '''
-echo "=== Check chats route ==="
-cat /var/www/summit/server/dist/routes/chats.js | head -100
+echo "=== Recent PM2 logs ==="
+pm2 logs summit-backend --lines 20 --nostream
 
 echo ""
-echo "=== Check chat_participants table ==="
-sudo -u postgres psql -d summit -c "SELECT cp.chat_id, cp.user_id, u.name, u.email FROM chat_participants cp JOIN users u ON cp.user_id = u.id LIMIT 10;"
-
-echo ""
-echo "=== Check chats table ==="
-sudo -u postgres psql -d summit -c "SELECT id, type, name, created_by FROM chats LIMIT 5;"
+echo "=== Check for errors ==="
+tail -20 /var/www/summit/server/logs/pm2-error-0.log | grep -v "Warning\|NodeDeprecation" | tail -10
 '''
 
-print("Checking chats response...")
+print("Verifying Chime routes...")
 response = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName='AWS-RunShellScript',

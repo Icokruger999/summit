@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check what the chats API returns"""
+"""Fully disable subscription check"""
 
 import boto3
 import time
@@ -7,20 +7,19 @@ import time
 ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
+# Check current state and fix
 check_cmd = '''
-echo "=== Check chats route ==="
-cat /var/www/summit/server/dist/routes/chats.js | head -100
+cd /var/www/summit/server/dist
+
+echo "=== Current subscription references ==="
+grep -n "checkSubscriptionAccess\|Subscription" index.js
 
 echo ""
-echo "=== Check chat_participants table ==="
-sudo -u postgres psql -d summit -c "SELECT cp.chat_id, cp.user_id, u.name, u.email FROM chat_participants cp JOIN users u ON cp.user_id = u.id LIMIT 10;"
-
-echo ""
-echo "=== Check chats table ==="
-sudo -u postgres psql -d summit -c "SELECT id, type, name, created_by FROM chats LIMIT 5;"
+echo "=== Routes section ==="
+grep -n "app.use.*api" index.js
 '''
 
-print("Checking chats response...")
+print("Checking current state...")
 response = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName='AWS-RunShellScript',

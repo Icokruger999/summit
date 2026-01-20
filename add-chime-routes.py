@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check what the chats API returns"""
+"""Add Chime routes to the server"""
 
 import boto3
 import time
@@ -7,20 +7,21 @@ import time
 ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
+# Check if chime routes exist and add them
 check_cmd = '''
-echo "=== Check chats route ==="
-cat /var/www/summit/server/dist/routes/chats.js | head -100
+echo "=== Check if chime.js exists ==="
+ls -la /var/www/summit/server/dist/routes/ | grep chime || echo "No chime route file"
 
 echo ""
-echo "=== Check chat_participants table ==="
-sudo -u postgres psql -d summit -c "SELECT cp.chat_id, cp.user_id, u.name, u.email FROM chat_participants cp JOIN users u ON cp.user_id = u.id LIMIT 10;"
+echo "=== Check index.js for chime import ==="
+grep -n "chime" /var/www/summit/server/dist/index.js || echo "No chime references in index.js"
 
 echo ""
-echo "=== Check chats table ==="
-sudo -u postgres psql -d summit -c "SELECT id, type, name, created_by FROM chats LIMIT 5;"
+echo "=== Check source chime.ts ==="
+ls -la /var/www/summit/server/src/routes/chime.ts 2>/dev/null || echo "No chime.ts source file"
 '''
 
-print("Checking chats response...")
+print("Checking Chime routes...")
 response = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName='AWS-RunShellScript',

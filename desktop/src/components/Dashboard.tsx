@@ -11,6 +11,7 @@ import ChatRequests from "./Chat/ChatRequests";
 import { MessageSquare, Calendar, User, Video, Settings, ChevronDown, Circle, PhoneOff, Phone, Users, UserPlus } from "lucide-react";
 import iconImage from "../assets/icon.png";
 import { useUpdatePresence, usePresence } from "../hooks/usePresence";
+import { useAutoAway } from "../hooks/useAutoAway";
 import { sounds } from "../lib/sounds";
 import NotificationToast from "./NotificationToast";
 import { useChatRequests } from "../hooks/useChatRequests";
@@ -52,6 +53,17 @@ export default function Dashboard({ user }: DashboardProps) {
   // Track user presence
   const { updateStatus } = useUpdatePresence();
   const { presence, refetch: refetchPresence } = usePresence(user?.id || null);
+  
+  // Auto-away: Set status to "away" after 5 minutes of inactivity
+  const { isAway } = useAutoAway({
+    enabled: !!user?.id && !inCall, // Don't auto-away during calls
+    awayTimeout: 5 * 60 * 1000, // 5 minutes
+    currentStatus: presence?.status || "online", // Pass current status so it skips busy/dnd
+    onStatusChange: (status) => {
+      console.log(`🔄 Auto-away status changed to: ${status}`);
+      refetchPresence();
+    },
+  });
   
   // Handle new chat request notifications
   const handleNewChatRequest = (request: any) => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check what the chats API returns"""
+"""Verify presence is working"""
 
 import boto3
 import time
@@ -8,19 +8,18 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 check_cmd = '''
-echo "=== Check chats route ==="
-cat /var/www/summit/server/dist/routes/chats.js | head -100
+echo "=== Wait for new requests ==="
+sleep 5
+
+echo "=== Recent logs after restart ==="
+tail -30 /var/www/summit/server/logs/pm2-combined-0.log | grep -i "presence\|error" || echo "No presence/error logs"
 
 echo ""
-echo "=== Check chat_participants table ==="
-sudo -u postgres psql -d summit -c "SELECT cp.chat_id, cp.user_id, u.name, u.email FROM chat_participants cp JOIN users u ON cp.user_id = u.id LIMIT 10;"
-
-echo ""
-echo "=== Check chats table ==="
-sudo -u postgres psql -d summit -c "SELECT id, type, name, created_by FROM chats LIMIT 5;"
+echo "=== Check presence data in DB ==="
+sudo -u postgres psql -d summit -c "SELECT user_id, status, last_seen FROM presence LIMIT 5;"
 '''
 
-print("Checking chats response...")
+print("Verifying presence...")
 response = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName='AWS-RunShellScript',
@@ -28,7 +27,7 @@ response = ssm.send_command(
     TimeoutSeconds=30
 )
 command_id = response['Command']['CommandId']
-time.sleep(5)
+time.sleep(10)
 
 output = ssm.get_command_invocation(
     CommandId=command_id,

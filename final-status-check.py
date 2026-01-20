@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check what the chats API returns"""
+"""Final status check"""
 
 import boto3
 import time
@@ -8,19 +8,23 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 check_cmd = '''
-echo "=== Check chats route ==="
-cat /var/www/summit/server/dist/routes/chats.js | head -100
+echo "=== PM2 Status ==="
+pm2 list
 
 echo ""
-echo "=== Check chat_participants table ==="
-sudo -u postgres psql -d summit -c "SELECT cp.chat_id, cp.user_id, u.name, u.email FROM chat_participants cp JOIN users u ON cp.user_id = u.id LIMIT 10;"
+echo "=== Health Check ==="
+curl -s http://localhost:4000/health
 
 echo ""
-echo "=== Check chats table ==="
-sudo -u postgres psql -d summit -c "SELECT id, type, name, created_by FROM chats LIMIT 5;"
+echo "=== Recent successful operations ==="
+tail -50 /var/www/summit/server/logs/pm2-out-0.log | grep -E "✅|📥|📤" | tail -15
+
+echo ""
+echo "=== Any recent errors? ==="
+tail -20 /var/www/summit/server/logs/pm2-error-0.log | grep -v "Warning\|NodeDeprecation\|a.co\|trace-warnings\|updates please" | tail -5 || echo "No recent errors"
 '''
 
-print("Checking chats response...")
+print("Final status check...")
 response = ssm.send_command(
     InstanceIds=[instance_id],
     DocumentName='AWS-RunShellScript',
