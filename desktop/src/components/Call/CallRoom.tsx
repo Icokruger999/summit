@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useChime } from "../../hooks/useChime";
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, X, Search } from "lucide-react";
+import { chatRequestsApi, getAuthToken } from "../../lib/api";
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com";
+
+interface Contact {
+  contact_id: string;
+  contact_name: string;
+  contact_email: string;
+}
 
 interface CallRoomProps {
   roomName: string;
@@ -13,6 +22,11 @@ interface CallRoomProps {
 
 export default function CallRoom({ roomName, callType = "video", initialSettings, onLeave, onConnected, otherUserName }: CallRoomProps) {
   const [error, setError] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
+  const [loadingContacts, setLoadingContacts] = useState(false);
   const { 
     connect, 
     disconnect, 
@@ -34,6 +48,61 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
   // Get initials from name
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // Load contacts when modal opens
+  useEffect(() => {
+    if (showInviteModal && contacts.length === 0) {
+      setLoadingContacts(true);
+      chatRequestsApi.getContacts()
+        .then((data) => {
+          setContacts(data || []);
+        })
+        .catch((err) => {
+          console.error("Failed to load contacts:", err);
+        })
+        .finally(() => {
+          setLoadingContacts(false);
+        });
+    }
+  }, [showInviteModal]);
+
+  // Filter contacts based on search
+  const filteredContacts = contacts.filter((contact) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      contact.contact_name?.toLowerCase().includes(query) ||
+      contact.contact_email?.toLowerCase().includes(query)
+    );
+  });
+
+  // Invite a contact to the call
+  const inviteToCall = async (contact: Contact) => {
+    try {
+      const token = getAuthToken();
+      if (!token) return;
+
+      // Send notification to the contact
+      const response = await fetch(`${SERVER_URL}/api/chime/notify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          recipientId: contact.contact_id,
+          roomName: roomName,
+          callType: callType,
+        }),
+      });
+
+      if (response.ok) {
+        setInvitedUsers((prev) => new Set(prev).add(contact.contact_id));
+        console.log(`Invited ${contact.contact_name} to the call`);
+      }
+    } catch (err) {
+      console.error("Failed to invite user:", err);
+    }
   };
 
   useEffect(() => {
@@ -190,8 +259,86 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
               {remoteAttendees.size > 0 ? "In call" : "Waiting for others..."} • {remoteAttendees.size + 1} participant{remoteAttendees.size !== 0 ? 's' : ''}
             </p>
           </div>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            title="Add people to call"
+          >
+            <UserPlus className="w-5 h-5" />
+            <span className="text-sm font-medium">Add People</span>
+          </button>
         </div>
       </div>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <h3 className="text-white font-semibold">Add People to Call</h3>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {loadingContacts ? (
+                  <div className="text-center py-8 text-gray-400">Loading contacts...</div>
+                ) : filteredContacts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    {searchQuery ? "No contacts found" : "No contacts available"}
+                  </div>
+                ) : (
+                  filteredContacts.map((contact) => (
+                    <div
+                      key={contact.contact_id}
+                      className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {getInitials(contact.contact_name || contact.contact_email)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{contact.contact_name || "Unknown"}</p>
+                          <p className="text-gray-400 text-sm">{contact.contact_email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => inviteToCall(contact)}
+                        disabled={invitedUsers.has(contact.contact_id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          invitedUsers.has(contact.contact_id)
+                            ? "bg-green-600/20 text-green-400 cursor-default"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        {invitedUsers.has(contact.contact_id) ? "Invited" : "Invite"}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video Area - Teams-like grid */}
       <div className="flex-1 flex items-center justify-center p-4">
