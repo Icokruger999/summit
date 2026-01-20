@@ -791,8 +791,8 @@ export default function Dashboard({ user }: DashboardProps) {
                 <Circle 
                   className={`w-3 h-3 ${
                     currentStatus === "online" ? "text-green-500 fill-green-500" :
+                    currentStatus === "away" ? "text-amber-500 fill-amber-500" :
                     currentStatus === "busy" ? "text-yellow-500 fill-yellow-500" :
-                    currentStatus === "away" ? "text-orange-500 fill-orange-500" :
                     currentStatus === "dnd" ? "text-red-500 fill-red-500" :
                     "text-gray-400 fill-gray-400"
                   }`}
@@ -807,7 +807,7 @@ export default function Dashboard({ user }: DashboardProps) {
                 <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   {[
                     { status: "online", label: "Online", color: "text-green-500 fill-green-500" },
-                    { status: "away", label: "Away", color: "text-orange-500 fill-orange-500" },
+                    { status: "away", label: "Away", color: "text-amber-500 fill-amber-500" },
                     { status: "busy", label: "Busy", color: "text-yellow-500 fill-yellow-500" },
                     { status: "dnd", label: "Do Not Disturb", color: "text-red-500 fill-red-500" },
                     { status: "offline", label: "Offline", color: "text-gray-400 fill-gray-400" },

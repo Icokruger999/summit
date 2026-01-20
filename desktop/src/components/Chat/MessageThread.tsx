@@ -643,9 +643,9 @@ export default function MessageThread({
               const statusColors = {
                 online: "bg-green-500",
                 offline: "bg-gray-400",
-                away: "bg-yellow-500",
-                busy: "bg-red-500",
-                dnd: "bg-purple-500",
+                away: "bg-amber-500",
+                busy: "bg-yellow-500",
+                dnd: "bg-red-500",
               };
               const statusTexts = {
                 online: "Online",

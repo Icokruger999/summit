@@ -915,8 +915,9 @@ export default function MessageThreadSimple({
               {chat?.type === "direct" && (
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
                   otherUserPresence === "online" ? "bg-green-500" :
-                  otherUserPresence === "away" ? "bg-yellow-500" :
-                  otherUserPresence === "busy" || otherUserPresence === "dnd" ? "bg-red-500" :
+                  otherUserPresence === "away" ? "bg-amber-500" :
+                  otherUserPresence === "busy" ? "bg-yellow-500" :
+                  otherUserPresence === "dnd" ? "bg-red-500" :
                   "bg-gray-400"
                 }`}></div>
               )}

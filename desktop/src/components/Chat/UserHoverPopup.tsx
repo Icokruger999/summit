@@ -44,9 +44,9 @@ export default function UserHoverPopup({ user, position }: UserHoverPopupProps) 
           {user.status && (
             <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
               user.status === "online" ? "bg-green-500" :
-              user.status === "away" ? "bg-yellow-500" :
-              user.status === "busy" ? "bg-red-500" :
-              user.status === "dnd" ? "bg-purple-500" :
+              user.status === "away" ? "bg-amber-500" :
+              user.status === "busy" ? "bg-yellow-500" :
+              user.status === "dnd" ? "bg-red-500" :
               "bg-gray-400"
             }`}></div>
           )}
