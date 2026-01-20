@@ -756,6 +756,8 @@ export default function MessageThread({
                 onMouseEnter={() => {
                   if (!isOwnMessage) {
                     setHoveredMessageId(message.id);
+                  } else {
+                    setShowMessageMenu(message.id);
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -769,23 +771,23 @@ export default function MessageThread({
                   setShowMessageMenu(null);
                 }}
               >
-                {/* Edit/Delete menu for own messages */}
-                {isOwnMessage && message.type === "text" && (
-                  <div className="flex items-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Edit/Delete menu for own messages - show on hover */}
+                {isOwnMessage && message.type === "text" && showMessageMenu === message.id && (
+                  <div className="flex items-center mr-2 message-menu-container">
                     <button
                       onClick={() => {
                         setEditingMessageId(message.id);
                         setEditContent(message.content);
                         setShowMessageMenu(null);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       title="Edit message"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteMessage(message.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                       title="Delete message"
                     >
                       <Trash2 className="w-4 h-4" />
