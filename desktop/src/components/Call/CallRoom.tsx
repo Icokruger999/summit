@@ -75,21 +75,102 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
   };
 
   if (!isConnected) {
+    // Show the room UI immediately while connecting (no "Connecting..." screen)
+    // This gives a better UX - caller sees the room right away
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="text-center bg-gray-900/95 backdrop-blur-xl p-12 rounded-2xl border border-white/10 max-w-md">
-          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-          <div className="text-white text-2xl font-semibold mb-2">Connecting...</div>
-          <div className="text-gray-400 text-sm mb-6">Setting up your {callType === "audio" ? "call" : "meeting"}</div>
+      <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        {/* Hidden audio element for Chime audio output */}
+        <audio id="chime-audio-output" autoPlay playsInline style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
+
+        {/* Header */}
+        <div className="px-6 py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-semibold text-lg">
+                {otherUserName || "Call"}
+              </h2>
+              <p className="text-gray-300 text-sm flex items-center gap-2">
+                <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+                Connecting...
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Area - Show room while connecting */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex flex-wrap items-center justify-center gap-4 max-w-6xl">
+            
+            {/* Local Video/Avatar (You) */}
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500/50 w-80 h-60">
+              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-white">You</span>
+                </div>
+              </div>
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">You</span>
+              </div>
+            </div>
+
+            {/* Waiting for other participant */}
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60">
+              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                    <span className="text-2xl font-bold text-gray-400">
+                      {otherUserName ? getInitials(otherUserName) : "?"}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm">Calling {otherUserName || "participant"}...</p>
+                  <p className="text-gray-500 text-xs mt-1">Ringing...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="bg-black/40 backdrop-blur-xl px-6 py-4 border-t border-white/10">
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={toggleAudio}
+              className={`p-4 rounded-full transition-all ${
+                !audioEnabled
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+              title={audioEnabled ? "Mute" : "Unmute"}
+            >
+              {!audioEnabled ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+            {callType === "video" && (
+              <button
+                onClick={toggleVideo}
+                className={`p-4 rounded-full transition-all ${
+                  !videoEnabled
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "bg-white/20 text-white hover:bg-white/30"
+                }`}
+                title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
+              >
+                {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+              </button>
+            )}
+            <div className="w-px h-10 bg-white/20 mx-2"></div>
+            <button
+              onClick={handleLeave}
+              className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
+              title="End Call"
+            >
+              <PhoneOff className="w-5 h-5" />
+            </button>
+          </div>
           {error && (
-            <div className="text-red-400 text-sm mt-4 bg-red-900/20 px-4 py-3 rounded-lg border border-red-500/30">{error}</div>
+            <div className="text-red-400 text-sm mt-3 text-center bg-red-900/20 px-4 py-2 rounded-lg mx-auto max-w-md">
+              {error}
+            </div>
           )}
-          <button
-            onClick={handleLeave}
-            className="mt-6 px-8 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
-          >
-            Cancel
-          </button>
         </div>
       </div>
     );
