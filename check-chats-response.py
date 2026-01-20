@@ -4,18 +4,11 @@ import time
 ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
-commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImZhYTllYWU5LWM3NWEtNDdmZC1iOGI4LTEyN2U1ZTY5ZTc0MiIsImVtYWlsIjoiaWNvQGFzdHV0ZXRlY2guY28uemEiLCJpYXQiOjE3Njg5MjU5NTIsImV4cCI6MTc2OTUzMDc1Mn0.prZlTOb5_eukwajBV08e8_8hH_TNHV1FvUt_qL85q-A"
 
-echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
-
-echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+commands = f'''
+echo "=== Get chats and check structure ==="
+curl -s -H "Authorization: Bearer {token}" http://localhost:4000/api/chats | head -500
 '''
 
 response = ssm.send_command(

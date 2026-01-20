@@ -5,17 +5,16 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Full .env (masked) ==="
+cat /var/www/summit/.env | sed 's/=.*/=***/'
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Check subscription middleware ==="
+cat /var/www/summit/middleware/subscription.js
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Check if EC2 has IAM role for Chime ==="
+curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/ 2>/dev/null || echo "No IAM role attached"
 '''
 
 response = ssm.send_command(

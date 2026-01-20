@@ -5,17 +5,16 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Check CORS config in index.js ==="
+grep -A10 "CORS" /var/www/summit/index.js | head -20
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Check .env CORS_ORIGINS ==="
+grep CORS /var/www/summit/.env
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Test CORS preflight ==="
+curl -s -X OPTIONS -H "Origin: https://summit.codingeverest.com" -H "Access-Control-Request-Method: GET" -I https://summit.api.codingeverest.com/api/subscriptions/status 2>&1 | head -20
 '''
 
 response = ssm.send_command(

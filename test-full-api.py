@@ -5,17 +5,19 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Test via nginx (external) ==="
+curl -s -o /dev/null -w "%{http_code}" https://summit.api.codingeverest.com/api/auth/me
+echo " - /api/auth/me (should be 401)"
+
+curl -s -o /dev/null -w "%{http_code}" https://summit.api.codingeverest.com/api/subscription/status
+echo " - /api/subscription/status (should be 401)"
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Test health endpoint ==="
+curl -s https://summit.api.codingeverest.com/api/health
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Server is working! ==="
 '''
 
 response = ssm.send_command(

@@ -5,17 +5,12 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Check users table - names ==="
+sudo -u postgres psql -d summit -c "SELECT id, name, email FROM users;"
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
-
-echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Check recent messages with sender info ==="
+sudo -u postgres psql -d summit -c "SELECT m.id, m.sender_id, u.name as sender_name, u.email as sender_email, LEFT(m.content, 30) as content FROM messages m JOIN users u ON m.sender_id = u.id ORDER BY m.created_at DESC LIMIT 10;"
 '''
 
 response = ssm.send_command(
@@ -28,7 +23,7 @@ response = ssm.send_command(
 command_id = response['Command']['CommandId']
 print(f'Command ID: {command_id}')
 
-time.sleep(10)
+time.sleep(15)
 
 output = ssm.get_command_invocation(
     CommandId=command_id,
@@ -38,3 +33,6 @@ output = ssm.get_command_invocation(
 print(f"Status: {output['Status']}")
 print('Output:')
 print(output.get('StandardOutputContent', ''))
+if output.get('StandardErrorContent'):
+    print('Errors:')
+    print(output.get('StandardErrorContent'))

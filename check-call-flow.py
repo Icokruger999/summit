@@ -5,17 +5,18 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+export HOME=/root
+
+echo "=== Check PM2 logs for call-related activity ==="
+pm2 logs summit --lines 50 --nostream | grep -E "call|notify|Chime|meeting|📞|INCOMING" || echo "No call logs found"
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Check chime.js notify endpoint ==="
+grep -A20 "notify" /var/www/summit/routes/chime.js | head -25
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Check messageNotifier ==="
+head -50 /var/www/summit/lib/messageNotifier.js
 '''
 
 response = ssm.send_command(
@@ -28,7 +29,7 @@ response = ssm.send_command(
 command_id = response['Command']['CommandId']
 print(f'Command ID: {command_id}')
 
-time.sleep(10)
+time.sleep(15)
 
 output = ssm.get_command_invocation(
     CommandId=command_id,

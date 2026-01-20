@@ -54,9 +54,9 @@ class MessageNotifier {
   }
 
   // Notify specific users about a new message
-  notifyUsers(userIds: string[], message: any) {
+  notifyUsers(userIds: string[], message: any, type: string = "NEW_MESSAGE") {
     const notification = JSON.stringify({
-      type: "NEW_MESSAGE",
+      type,
       data: message,
     });
 
@@ -66,7 +66,7 @@ class MessageNotifier {
         userClients.forEach((ws) => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(notification);
-            console.log(`📤 Notified user ${userId} of new message`);
+            console.log(`📤 Notified user ${userId} of ${type}`);
           }
         });
       }

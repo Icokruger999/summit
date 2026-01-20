@@ -5,17 +5,17 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Check how PORT is set in index.js ==="
+grep -A2 -B2 "PORT" /var/www/summit/index.js | head -20
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Check PM2 ecosystem config ==="
+cat /var/www/summit/ecosystem.config.cjs 2>/dev/null || echo "No ecosystem.config.cjs"
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Check PM2 process env ==="
+export HOME=/root
+pm2 env 0 | grep -E "PORT|cwd|NODE_ENV"
 '''
 
 response = ssm.send_command(

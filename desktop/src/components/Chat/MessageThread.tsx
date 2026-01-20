@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useDataChannel } from "../../hooks/useDataChannel";
 import { useLiveKit } from "../../hooks/useLiveKit";
 import FileAttachment from "./FileAttachment";
-import { Send, Video, Paperclip, User, Phone, PhoneOff, Check, CheckCheck, XCircle, Clock, Smile } from "lucide-react";
+import { Send, Video, Paperclip, User, Phone, PhoneOff, Check, CheckCheck, XCircle, Clock, Smile, Pencil, Trash2, X } from "lucide-react";
 import { messagesApi, chatRequestsApi, usersApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { sounds } from "../../lib/sounds";
@@ -21,6 +21,7 @@ interface Message {
   readBy?: string[]; // Array of user IDs who have read this message
   status?: "sending" | "sent" | "delivered" | "read" | "failed"; // Message delivery status
   reactions?: Record<string, string[]>; // emoji -> array of user IDs who reacted
+  editedAt?: Date; // When the message was last edited
   callData?: {
     type: "ended" | "missed";
     duration?: number; // in minutes
@@ -53,6 +54,9 @@ export default function MessageThread({
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [showMessageMenu, setShowMessageMenu] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [displayName, setDisplayName] = useState<string>("Chat");
   const [otherUserPresence, setOtherUserPresence] = useState<"online" | "offline" | "away" | "busy" | "dnd">("offline");
@@ -215,6 +219,45 @@ export default function MessageThread({
       })
     );
     setShowReactionPicker(null);
+  };
+
+  // Handle editing a message
+  const handleEditMessage = async (messageId: string) => {
+    if (!editContent.trim()) {
+      setEditingMessageId(null);
+      return;
+    }
+
+    try {
+      await messagesApi.editMessage(messageId, editContent.trim());
+      
+      // Update local state
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, content: editContent.trim(), editedAt: new Date() }
+            : m
+        )
+      );
+      
+      setEditingMessageId(null);
+      setEditContent("");
+    } catch (error) {
+      console.error("Error editing message:", error);
+    }
+  };
+
+  // Handle deleting a message
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await messagesApi.deleteMessage(messageId);
+      
+      // Remove from local state
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setShowMessageMenu(null);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
   };
 
   // Listen for call notifications
@@ -711,21 +754,45 @@ export default function MessageThread({
                 key={message.id}
                 className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} mb-4 group relative`}
                 onMouseEnter={() => {
-                  // Only show picker on other people's messages
                   if (!isOwnMessage) {
                     setHoveredMessageId(message.id);
                   }
                 }}
                 onMouseLeave={(e) => {
-                  // Don't hide if moving to the picker
                   const relatedTarget = e.relatedTarget;
-                  if (relatedTarget && relatedTarget instanceof HTMLElement && relatedTarget.closest('.reaction-picker-container')) {
+                  if (relatedTarget && relatedTarget instanceof HTMLElement && 
+                      (relatedTarget.closest('.reaction-picker-container') || relatedTarget.closest('.message-menu-container'))) {
                     return;
                   }
                   setHoveredMessageId(null);
                   setShowReactionPicker(null);
+                  setShowMessageMenu(null);
                 }}
               >
+                {/* Edit/Delete menu for own messages */}
+                {isOwnMessage && message.type === "text" && (
+                  <div className="flex items-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingMessageId(message.id);
+                        setEditContent(message.content);
+                        setShowMessageMenu(null);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-gray-100 rounded-full transition-colors"
+                      title="Edit message"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMessage(message.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                      title="Delete message"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                
                 <div className={`relative max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
                   message.senderId === userId
                     ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
@@ -754,6 +821,43 @@ export default function MessageThread({
                         <Paperclip className="w-4 h-4" />
                         {message.fileName || message.content}
                       </a>
+                    ) : editingMessageId === message.id ? (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleEditMessage(message.id);
+                            } else if (e.key === "Escape") {
+                              setEditingMessageId(null);
+                              setEditContent("");
+                            }
+                          }}
+                          className="w-full px-2 py-1 rounded text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white"
+                          autoFocus
+                        />
+                        <div className="flex gap-1 justify-end">
+                          <button
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditContent("");
+                            }}
+                            className="p-1 text-white/70 hover:text-white transition-colors"
+                            title="Cancel"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditMessage(message.id)}
+                            className="p-1 text-white/70 hover:text-white transition-colors"
+                            title="Save"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <p className="whitespace-pre-wrap break-words">{message.content}</p>
                     )}
@@ -762,6 +866,7 @@ export default function MessageThread({
                     message.senderId === userId ? "text-green-100" : "text-blue-100"
                   }`}>
                     <span>{formatTime(message.timestamp)}</span>
+                    {message.editedAt && <span className="italic">(edited)</span>}
                     {/* Message status indicators for sent messages */}
                     {message.senderId === userId && (
                       <div className="flex items-center ml-1" title={

@@ -284,6 +284,14 @@ export const messagesApi = {
     });
   },
 
+  // Edit a message
+  editMessage: async (messageId: string, content: string) => {
+    return apiRequest<{ success: boolean; editedAt: string }>(`/api/messages/${messageId}`, {
+      method: "PUT",
+      body: JSON.stringify({ content }),
+    });
+  },
+
   markAsRead: async (messageIds: string[], chatId?: string) => {
     return apiRequest<{ success: boolean }>("/api/messages/read", {
       method: "POST",

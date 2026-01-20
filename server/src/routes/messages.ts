@@ -154,6 +154,61 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Edit a message
+router.put("/:messageId", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { messageId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: "Message content is required" });
+    }
+
+    // Verify user is the sender and message exists
+    const messageCheck = await query(
+      `SELECT sender_id, chat_id FROM messages WHERE id = $1 AND deleted_at IS NULL`,
+      [messageId]
+    );
+
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    if (messageCheck.rows[0].sender_id !== userId) {
+      return res.status(403).json({ error: "You can only edit your own messages" });
+    }
+
+    // Update message
+    await query(
+      `UPDATE messages SET content = $1, edited_at = NOW() WHERE id = $2`,
+      [content.trim(), messageId]
+    );
+
+    // Notify other participants about the edit
+    const chatId = messageCheck.rows[0].chat_id;
+    const participants = await query(
+      `SELECT user_id FROM chat_participants WHERE chat_id = $1 AND user_id != $2`,
+      [chatId, userId]
+    );
+
+    if (participants.rows.length > 0) {
+      const userIds = participants.rows.map(row => row.user_id);
+      messageNotifier.notifyUsers(userIds, {
+        messageId,
+        chatId,
+        content: content.trim(),
+        editedAt: new Date().toISOString(),
+      }, "MESSAGE_EDITED");
+    }
+
+    res.json({ success: true, editedAt: new Date().toISOString() });
+  } catch (error: any) {
+    console.error("Error editing message:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete a message (soft delete)
 router.delete("/:messageId", authenticate, async (req: AuthRequest, res) => {
   try {
@@ -162,7 +217,7 @@ router.delete("/:messageId", authenticate, async (req: AuthRequest, res) => {
 
     // Verify user is the sender
     const messageCheck = await query(
-      `SELECT sender_id FROM messages WHERE id = $1`,
+      `SELECT sender_id, chat_id FROM messages WHERE id = $1 AND deleted_at IS NULL`,
       [messageId]
     );
 
@@ -179,6 +234,21 @@ router.delete("/:messageId", authenticate, async (req: AuthRequest, res) => {
       `UPDATE messages SET deleted_at = NOW() WHERE id = $1`,
       [messageId]
     );
+
+    // Notify other participants about the deletion
+    const chatId = messageCheck.rows[0].chat_id;
+    const participants = await query(
+      `SELECT user_id FROM chat_participants WHERE chat_id = $1 AND user_id != $2`,
+      [chatId, userId]
+    );
+
+    if (participants.rows.length > 0) {
+      const userIds = participants.rows.map(row => row.user_id);
+      messageNotifier.notifyUsers(userIds, {
+        messageId,
+        chatId,
+      }, "MESSAGE_DELETED");
+    }
 
     res.json({ success: true });
   } catch (error: any) {

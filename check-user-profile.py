@@ -5,17 +5,16 @@ ssm = boto3.client('ssm', region_name='eu-west-1')
 instance_id = 'i-0fba58db502cc8d39'
 
 commands = '''
-echo "=== Check current Chime region in code ==="
-grep -E "region|Region" /var/www/summit/routes/chime.js | head -10
+echo "=== Check your user profile ==="
+sudo -u postgres psql -d summit -c "SELECT id, email, name FROM users WHERE id = 'faa9eae9-c75a-47fd-b8b8-127e5e69e742';"
 
 echo ""
-echo "=== Check AWS_REGION in .env ==="
-grep AWS_REGION /var/www/summit/.env
+echo "=== Check all users ==="
+sudo -u postgres psql -d summit -c "SELECT id, email, name FROM users LIMIT 10;"
 
 echo ""
-echo "=== The Chime SDK should use us-east-1, not AWS_REGION ==="
-echo "Checking if chime.js hardcodes us-east-1..."
-grep "us-east-1" /var/www/summit/routes/chime.js
+echo "=== Check recent messages with sender info ==="
+sudo -u postgres psql -d summit -c "SELECT m.id, m.sender_id, m.sender_name, m.content, u.name as user_name FROM messages m LEFT JOIN users u ON m.sender_id = u.id ORDER BY m.created_at DESC LIMIT 5;"
 '''
 
 response = ssm.send_command(
@@ -28,7 +27,7 @@ response = ssm.send_command(
 command_id = response['Command']['CommandId']
 print(f'Command ID: {command_id}')
 
-time.sleep(10)
+time.sleep(15)
 
 output = ssm.get_command_invocation(
     CommandId=command_id,
