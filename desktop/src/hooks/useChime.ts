@@ -37,7 +37,13 @@ export function useChime(onConnected?: () => void) {
   // Initialize device controller
   useEffect(() => {
     const logger = new ConsoleLogger("ChimeSDK", LogLevel.WARN);
-    deviceControllerRef.current = new DefaultDeviceController(logger);
+    try {
+      deviceControllerRef.current = new DefaultDeviceController(logger);
+    } catch (error) {
+      console.error("Error creating device controller:", error);
+      // Create a basic device controller anyway - it will work without devices
+      deviceControllerRef.current = new DefaultDeviceController(logger);
+    }
     
     return () => {
       if (meetingSessionRef.current) {
@@ -145,10 +151,17 @@ export function useChime(onConnected?: () => void) {
       // Create meeting session
       const logger = new ConsoleLogger("ChimeSDK", LogLevel.WARN);
       const configuration = new MeetingSessionConfiguration(meetingData, attendeeData);
+      
+      // Ensure device controller exists
+      if (!deviceControllerRef.current) {
+        console.log("Creating device controller on demand");
+        deviceControllerRef.current = new DefaultDeviceController(logger);
+      }
+      
       const meetingSession = new DefaultMeetingSession(
         configuration,
         logger,
-        deviceControllerRef.current!
+        deviceControllerRef.current
       );
       meetingSessionRef.current = meetingSession;
 
@@ -290,8 +303,16 @@ export function useChime(onConnected?: () => void) {
       // Subscribe to volume for all attendees
       meetingSession.audioVideo.realtimeSubscribeToVolumeIndicator(myAttendeeId, volumeCallback);
 
-      // Start audio input (microphone)
+      // Start audio input (microphone) - wrapped in try-catch to not block joining
       try {
+        // Request microphone permission first
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (permError) {
+          console.warn("Microphone permission not granted:", permError);
+          // Continue anyway - user can still hear others
+        }
+        
         const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
         console.log("Audio input devices:", audioInputDevices.length);
         if (audioInputDevices.length > 0) {
