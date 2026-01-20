@@ -35,9 +35,15 @@ pm2 restart summit-backend
 ```
 
 ## If Server Breaks:
-1. Restore from backup: `cp -r /var/www/summit-backup-1768663852/server/dist/* /var/www/summit/dist/`
-2. Remove subscription middleware with sed
-3. Restart PM2
+1. Restore from backup with chime: `cp -r /var/www/summit-backup-with-chime-1768948233/dist/* /var/www/summit/dist/`
+   (This backup has: PostgreSQL presence, Chime routes, no Supabase, no subscription middleware)
+2. Restart PM2: `export HOME=/home/ubuntu && pm2 restart summit-backend`
+3. Test: `curl http://localhost:4000/health`
+
+## Available Backups:
+- `/var/www/summit-backup-with-chime-1768948233/dist/` - LATEST (has Chime, PostgreSQL, no Supabase)
+- `/var/www/summit-backup-clean-1768947835/dist/` - Clean (no Chime, PostgreSQL, no Supabase)
+- `/var/www/summit-backup-1768663852/server/dist/` - OLD (has Supabase - don't use)
 
 ## Subscription Middleware:
 The subscription check was DISABLED. If it comes back after a restore, remove it:

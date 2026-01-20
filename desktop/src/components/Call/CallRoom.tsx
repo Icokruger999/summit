@@ -146,6 +146,25 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
   }, [remoteVideoTiles, bindVideoElement]);
 
   const handleLeave = () => {
+    // Notify other participants that call is ending via WebSocket
+    try {
+      const token = getAuthToken();
+      if (token) {
+        fetch(`${SERVER_URL}/api/chime/end-call`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            roomName: roomName,
+          }),
+        }).catch(err => console.error("Failed to notify call end:", err));
+      }
+    } catch (error) {
+      console.error("Error notifying call end:", error);
+    }
+    
     disconnect();
     onLeave();
   };

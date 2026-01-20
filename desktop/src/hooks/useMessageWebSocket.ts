@@ -123,6 +123,14 @@ export function useMessageWebSocket({
                 callType: data.data.callType,
               }
             }));
+          } else if (data.type === "CALL_ENDED") {
+            console.log("📞 Received call ended notification:", data.data);
+            // Dispatch event for call ending
+            window.dispatchEvent(new CustomEvent('callEnded', {
+              detail: {
+                roomName: data.data.roomName,
+              }
+            }));
           } else if (data.type === "MESSAGES_READ") {
             console.log("✅ Received messages read notification:", data.data);
             // Dispatch event for messages being read (so sender can update statuses)

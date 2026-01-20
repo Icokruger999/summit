@@ -224,6 +224,33 @@ export default function Dashboard({ user }: DashboardProps) {
     };
   }, []);
 
+  // Listen for call ended notifications
+  useEffect(() => {
+    const handleCallEnded = (event: CustomEvent<any>) => {
+      const { roomName } = event.detail;
+      
+      console.log('📞 Call ended by other participant:', roomName);
+      
+      // If we're in this call, end it
+      if (inCall && callRoom === roomName) {
+        setInCall(false);
+        setCallRoom(null);
+        setIsCalling(false);
+        setCallingUser(null);
+        setOtherUserName(null);
+        if (callTimeoutRef.current) {
+          clearTimeout(callTimeoutRef.current);
+        }
+        callStartTimeRef.current = null;
+      }
+    };
+
+    window.addEventListener('callEnded' as any, handleCallEnded as EventListener);
+    return () => {
+      window.removeEventListener('callEnded' as any, handleCallEnded as EventListener);
+    };
+  }, [inCall, callRoom]);
+
   // Handle chat request accepted notification
   const handleChatRequestAccepted = (data: any) => {
     const requesteeName = data.requesteeName || "Someone";
