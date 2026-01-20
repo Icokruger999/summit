@@ -6,8 +6,9 @@ import crypto from "crypto";
 
 const router = express.Router();
 
+// Chime SDK MUST use us-east-1 region - it's the only supported region for meetings
 const chimeClient = new ChimeSDKMeetings({
-  region: process.env.AWS_REGION || "us-east-1",
+  region: "us-east-1",
 });
 
 // Store active meetings in memory (maps externalMeetingId to meeting data)
