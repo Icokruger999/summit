@@ -150,14 +150,14 @@ router.post("/notify", authenticate, async (req: AuthRequest, res) => {
     console.log(`📞 Sending call notification from ${callerName} to user ${recipientId}`);
 
     // Send WebSocket notification to recipient
+    // Use "INCOMING_CALL" as the type parameter so it's not wrapped as NEW_MESSAGE
     messageNotifier.notifyUser(recipientId, {
-      type: "INCOMING_CALL",
       callerId,
       callerName,
       roomName,
       callType: callType || "video",
       timestamp: new Date().toISOString(),
-    });
+    }, "INCOMING_CALL");
 
     res.json({ success: true });
   } catch (error: any) {
