@@ -251,7 +251,7 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
       localStorage.setItem("audioOutputDeviceId", selectedAudioOutput);
     }
     
-    alert("Settings saved! Your preferences have been updated.");
+    // Settings saved silently - no popup
   };
 
   const handleProfileEdit = () => {
@@ -310,7 +310,7 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
         }
       }
       
-      alert("Profile updated successfully!");
+      // Profile updated silently - no popup
     } catch (error: any) {
       console.error("Error saving profile:", error);
       let errorMessage = "Failed to save profile. Please try again.";
@@ -328,7 +328,7 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
         errorMessage = "Unauthorized. Please log in again.";
       }
       
-      alert(`Error: ${errorMessage}`);
+      // Error logged to console - no popup
     } finally {
       setSavingProfile(false);
     }
