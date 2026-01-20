@@ -252,5 +252,145 @@ router.post("/group", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Update group chat name
+router.patch("/:chatId/name", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { chatId } = req.params;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+
+    // Verify user is a participant and chat is a group
+    const chatCheck = await query(`
+      SELECT c.type, c.created_by
+      FROM chats c
+      INNER JOIN chat_participants cp ON c.id = cp.chat_id
+      WHERE c.id = $1 AND cp.user_id = $2
+    `, [chatId, userId]);
+
+    if (chatCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Not a participant in this chat" });
+    }
+
+    if (chatCheck.rows[0].type !== "group") {
+      return res.status(400).json({ error: "Can only rename group chats" });
+    }
+
+    // Update name
+    await query(`
+      UPDATE chats
+      SET name = $1, updated_at = NOW()
+      WHERE id = $2
+    `, [name.trim(), chatId]);
+
+    res.json({ success: true, name: name.trim() });
+  } catch (error: any) {
+    console.error("Error updating group chat name:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add members to group chat
+router.post("/:chatId/members", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { chatId } = req.params;
+    const { memberIds } = req.body;
+
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: "At least one member ID is required" });
+    }
+
+    // Verify user is a participant and chat is a group
+    const chatCheck = await query(`
+      SELECT c.type
+      FROM chats c
+      INNER JOIN chat_participants cp ON c.id = cp.chat_id
+      WHERE c.id = $1 AND cp.user_id = $2
+    `, [chatId, userId]);
+
+    if (chatCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Not a participant in this chat" });
+    }
+
+    if (chatCheck.rows[0].type !== "group") {
+      return res.status(400).json({ error: "Can only add members to group chats" });
+    }
+
+    // Add new members
+    for (const memberId of memberIds) {
+      await query(
+        `INSERT INTO chat_participants (chat_id, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (chat_id, user_id) DO NOTHING`,
+        [chatId, memberId]
+      );
+    }
+
+    res.json({ success: true, addedCount: memberIds.length });
+  } catch (error: any) {
+    console.error("Error adding members to group chat:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete/leave group chat
+router.delete("/:chatId", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { chatId } = req.params;
+
+    // Check if user is participant
+    const participantCheck = await query(`
+      SELECT c.type, c.created_by
+      FROM chats c
+      INNER JOIN chat_participants cp ON c.id = cp.chat_id
+      WHERE c.id = $1 AND cp.user_id = $2
+    `, [chatId, userId]);
+
+    if (participantCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Not a participant in this chat" });
+    }
+
+    const chat = participantCheck.rows[0];
+
+    // For group chats, remove the user from participants
+    if (chat.type === "group") {
+      await query(`
+        DELETE FROM chat_participants
+        WHERE chat_id = $1 AND user_id = $2
+      `, [chatId, userId]);
+
+      // Check if there are any participants left
+      const remainingParticipants = await query(`
+        SELECT COUNT(*) as count
+        FROM chat_participants
+        WHERE chat_id = $1
+      `, [chatId]);
+
+      // If no participants left, delete the chat
+      if (parseInt(remainingParticipants.rows[0].count) === 0) {
+        await query(`DELETE FROM chats WHERE id = $1`, [chatId]);
+      }
+
+      res.json({ success: true, action: "left" });
+    } else {
+      // For direct chats, just remove the user from participants
+      await query(`
+        DELETE FROM chat_participants
+        WHERE chat_id = $1 AND user_id = $2
+      `, [chatId, userId]);
+
+      res.json({ success: true, action: "deleted" });
+    }
+  } catch (error: any) {
+    console.error("Error deleting/leaving chat:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 

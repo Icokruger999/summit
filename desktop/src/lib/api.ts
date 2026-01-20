@@ -221,6 +221,26 @@ export const chatsApi = {
     });
   },
 
+  updateGroupName: async (chatId: string, name: string) => {
+    return apiRequest<{ success: boolean; name: string }>(`/api/chats/${chatId}/name`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  addGroupMembers: async (chatId: string, memberIds: string[]) => {
+    return apiRequest<{ success: boolean; addedCount: number }>(`/api/chats/${chatId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ memberIds }),
+    });
+  },
+
+  deleteChat: async (chatId: string) => {
+    return apiRequest<{ success: boolean; action: string }>(`/api/chats/${chatId}`, {
+      method: "DELETE",
+    });
+  },
+
   updateLastMessage: async (chatId: string, lastMessage: string) => {
     return apiRequest<{ success: boolean }>(`/api/chats/${chatId}/last-message`, {
       method: "PATCH",

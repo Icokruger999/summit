@@ -352,8 +352,7 @@ export default function ChatList({
         window.dispatchEvent(new CustomEvent('chatCreated', { detail: { chatId: chat.id } }));
       } catch (error) {
         console.error("❌ Error creating group chat:", error);
-        // Show error to user
-        alert("Failed to create group chat. Please try again.");
+        // Silently fail - error is logged to console
       }
     }
   };
