@@ -298,6 +298,18 @@ export function useChime(onConnected?: () => void) {
         console.warn("No audio input devices found");
       }
 
+      // Set up audio output device
+      const audioOutputDevices = await meetingSession.audioVideo.listAudioOutputDevices();
+      console.log("Audio output devices:", audioOutputDevices.length);
+      if (audioOutputDevices.length > 0) {
+        try {
+          await meetingSession.audioVideo.chooseAudioOutput(audioOutputDevices[0].deviceId);
+          console.log("Audio output device selected:", audioOutputDevices[0].label);
+        } catch (outputError) {
+          console.warn("Could not select audio output device:", outputError);
+        }
+      }
+
       // Start the session FIRST (before binding audio output)
       meetingSession.audioVideo.start();
       console.log("Meeting session started");
@@ -308,6 +320,12 @@ export function useChime(onConnected?: () => void) {
         const audioOutputElement = document.getElementById("chime-audio-output") as HTMLAudioElement;
         if (audioOutputElement) {
           try {
+            // Resume AudioContext if it's suspended (browser autoplay policy)
+            if (audioOutputElement.paused) {
+              await audioOutputElement.play().catch(() => {
+                console.log("Audio autoplay blocked, will play on user interaction");
+              });
+            }
             await meetingSession.audioVideo.bindAudioElement(audioOutputElement);
             console.log("Audio output bound successfully");
           } catch (audioError) {
@@ -343,15 +361,31 @@ export function useChime(onConnected?: () => void) {
     isConnectingRef.current = false;
     
     if (meetingSessionRef.current) {
+      try {
+        // Stop audio input first (this removes the red recording indicator)
+        await meetingSessionRef.current.audioVideo.stopAudioInput();
+        console.log("Audio input stopped");
+      } catch (error) {
+        console.error("Error stopping audio input:", error);
+      }
+      
       // Stop video input to turn off camera
       try {
-        meetingSessionRef.current.audioVideo.stopVideoInput();
+        await meetingSessionRef.current.audioVideo.stopVideoInput();
         meetingSessionRef.current.audioVideo.stopLocalVideoTile();
+        console.log("Video input stopped");
       } catch (error) {
         console.error("Error stopping video:", error);
       }
       
-      meetingSessionRef.current.audioVideo.stop();
+      // Stop the session
+      try {
+        meetingSessionRef.current.audioVideo.stop();
+        console.log("Meeting session stopped");
+      } catch (error) {
+        console.error("Error stopping session:", error);
+      }
+      
       meetingSessionRef.current = null;
     }
 

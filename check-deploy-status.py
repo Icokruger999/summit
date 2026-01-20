@@ -3,16 +3,12 @@ import time
 
 amplify = boto3.client('amplify', region_name='eu-west-1')
 
-# Check job status
-job = amplify.get_job(
+# List recent jobs
+jobs = amplify.list_jobs(
     appId='d1mhd5fnnjyucj',
     branchName='main',
-    jobId='295'
+    maxResults=3
 )
 
-print('Status:', job['job']['summary']['status'])
-print('Start time:', job['job']['summary'].get('startTime', 'N/A'))
-
-# Show steps
-for step in job['job'].get('steps', []):
-    print(f"  {step['stepName']}: {step['status']}")
+for job_summary in jobs['jobSummaries']:
+    print(f"Job {job_summary['jobId']}: {job_summary['status']} - {job_summary.get('commitMessage', 'N/A')[:50]}")
