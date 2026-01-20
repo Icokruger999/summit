@@ -248,16 +248,28 @@ export default function ChatList({
       try {
         const presenceData = await presenceApi.getBatch(userIdsToCheck);
         const newPresenceMap: Record<string, "online" | "offline" | "away" | "busy" | "dnd"> = {};
-        presenceData.forEach((p: any) => {
-          newPresenceMap[p.user_id] = p.status || "online"; // Default to online instead of offline
+        
+        // Backend returns an object keyed by user_id, not an array
+        if (presenceData && typeof presenceData === 'object') {
+          Object.entries(presenceData).forEach(([oderId, data]: [string, any]) => {
+            newPresenceMap[oderId] = data?.status || "offline";
+          });
+        }
+        
+        // Fill in missing users as offline
+        userIdsToCheck.forEach(id => {
+          if (!newPresenceMap[id]) {
+            newPresenceMap[id] = "offline";
+          }
         });
+        
         setPresenceMap(newPresenceMap);
       } catch (error) {
         console.error("Error fetching presence:", error);
-        // If presence API fails, assume users are online (since WebSocket is working)
+        // If presence API fails, default to offline (safer assumption)
         const newPresenceMap: Record<string, "online" | "offline" | "away" | "busy" | "dnd"> = {};
         userIdsToCheck.forEach(userId => {
-          newPresenceMap[userId] = "online";
+          newPresenceMap[userId] = "offline";
         });
         setPresenceMap(newPresenceMap);
       }
