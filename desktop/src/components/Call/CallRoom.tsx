@@ -41,11 +41,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
       });
     }
 
+    // Cleanup only runs when component unmounts
     return () => {
-      hasConnectedRef.current = false;
-      disconnect();
+      // Only disconnect if we actually connected
+      if (hasConnectedRef.current) {
+        console.log("CallRoom unmounting, disconnecting from meeting");
+        hasConnectedRef.current = false;
+        disconnect();
+      }
     };
-  }, [roomName]); // Only depend on roomName
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomName]); // Only depend on roomName, connect/disconnect are stable
 
   // Bind remote video elements when tiles change
   useEffect(() => {
