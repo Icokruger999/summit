@@ -493,3 +493,29 @@ export const callsApi = {
     }>(`/api/calls/${callId}`);
   },
 };
+
+// Notifications API
+export const notificationsApi = {
+  getUnread: async () => {
+    return apiRequest<Array<{
+      id: string;
+      type: string;
+      title: string;
+      message: string;
+      data: any;
+      created_at: string;
+    }>>("/api/notifications/unread");
+  },
+
+  markAsRead: async (notificationId: string) => {
+    return apiRequest<{ success: boolean }>(`/api/notifications/${notificationId}/read`, {
+      method: "POST",
+    });
+  },
+
+  markAllAsRead: async () => {
+    return apiRequest<{ success: boolean }>("/api/notifications/read-all", {
+      method: "POST",
+    });
+  },
+};

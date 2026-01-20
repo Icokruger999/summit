@@ -274,6 +274,48 @@ export default function Dashboard({ user }: DashboardProps) {
     };
   }, []);
 
+  // Fetch persistent notifications on mount (for offline notifications)
+  useEffect(() => {
+    const fetchPersistentNotifications = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { notificationsApi } = await import("../lib/api");
+        const notifications = await notificationsApi.getUnread();
+        
+        console.log(`📬 Fetched ${notifications.length} unread notifications`);
+        
+        // Show each notification
+        for (const notif of notifications) {
+          if (notif.type === 'GROUP_ADDED') {
+            const data = notif.data || {};
+            setNotification({
+              message: notif.message,
+              type: "info",
+            });
+            
+            // Mark as read
+            await notificationsApi.markAsRead(notif.id);
+            
+            // Small delay between notifications
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        // Reload chats if there were any group notifications
+        if (notifications.some(n => n.type === 'GROUP_ADDED')) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Error fetching persistent notifications:", error);
+      }
+    };
+    
+    fetchPersistentNotifications();
+  }, [user?.id]);
+
   // Handle chat request accepted notification
   const handleChatRequestAccepted = (data: any) => {
     const requesteeName = data.requesteeName || "Someone";
