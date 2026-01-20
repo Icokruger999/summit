@@ -23,6 +23,7 @@ export function useChime() {
   const meetingSessionRef = useRef<DefaultMeetingSession | null>(null);
   const deviceControllerRef = useRef<DefaultDeviceController | null>(null);
   const localVideoElementRef = useRef<HTMLVideoElement | null>(null);
+  const isConnectingRef = useRef(false);
 
   // Initialize device controller
   useEffect(() => {
@@ -37,6 +38,20 @@ export function useChime() {
   }, []);
 
   const connect = useCallback(async (roomName: string) => {
+    // Prevent multiple simultaneous connection attempts
+    if (isConnectingRef.current) {
+      console.log("Already connecting, ignoring duplicate request");
+      return;
+    }
+
+    // If already connected to this room, don't reconnect
+    if (isConnected && meetingSessionRef.current) {
+      console.log("Already connected to meeting");
+      return;
+    }
+
+    isConnectingRef.current = true;
+
     try {
       const token = getAuthToken();
       if (!token) throw new Error("Not authenticated");
@@ -140,15 +155,19 @@ export function useChime() {
       // Start the session
       meetingSession.audioVideo.start();
       setIsConnected(true);
+      isConnectingRef.current = false;
       console.log("Chime session started successfully");
       
     } catch (error) {
+      isConnectingRef.current = false;
       console.error("Failed to connect to Chime:", error);
       throw error;
     }
-  }, []);
+  }, [isConnected]);
 
   const disconnect = useCallback(async () => {
+    isConnectingRef.current = false;
+    
     if (meetingSessionRef.current) {
       meetingSessionRef.current.audioVideo.stop();
       meetingSessionRef.current = null;
