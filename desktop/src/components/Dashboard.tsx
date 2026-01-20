@@ -175,6 +175,8 @@ export default function Dashboard({ user }: DashboardProps) {
     const handleIncomingCall = (event: CustomEvent<any>) => {
       const { callerId, callerName, callType, roomName } = event.detail;
       
+      console.log('📞 Incoming call from:', callerName, 'Type:', callType, 'Room:', roomName);
+      
       // Play ringtone
       import("../lib/sounds").then(({ startCallRinging }) => {
         startCallRinging();
