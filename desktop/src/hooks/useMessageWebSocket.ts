@@ -112,6 +112,17 @@ export function useMessageWebSocket({
             console.log("📨 Received real-time message notification:", data.data);
             // Use ref to get latest callback without recreating connection
             onNewMessageRef.current(data.data);
+          } else if (data.type === "INCOMING_CALL") {
+            console.log("📞 Received incoming call notification:", data);
+            // Dispatch event for incoming call
+            window.dispatchEvent(new CustomEvent('incomingCall', {
+              detail: {
+                callerId: data.callerId,
+                callerName: data.callerName,
+                roomName: data.roomName,
+                callType: data.callType,
+              }
+            }));
           } else if (data.type === "MESSAGES_READ") {
             console.log("✅ Received messages read notification:", data.data);
             // Dispatch event for messages being read (so sender can update statuses)

@@ -842,8 +842,40 @@ export default function Dashboard({ user }: DashboardProps) {
                   chatId={selectedChat}
                   userId={user.id}
                   chat={chats.find(c => c.id === selectedChat)}
-                  onStartCall={(roomName, type = "video") => {
-                    // Show pre-call settings instead of directly calling
+                  onStartCall={async (roomName, type = "video") => {
+                    // Get the other user's ID from the chat
+                    const chat = chats.find(c => c.id === selectedChat);
+                    if (!chat) return;
+
+                    // Extract recipient ID from chat
+                    let recipientId: string | null = null;
+                    if (chat.type === "direct" && chat.participants) {
+                      recipientId = chat.participants.find((p: any) => p.id !== user.id)?.id || null;
+                    }
+
+                    // Send call notification to recipient
+                    if (recipientId) {
+                      try {
+                        const token = localStorage.getItem("auth_token");
+                        await fetch(`${import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com"}/api/chime/notify`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({
+                            recipientId,
+                            roomName,
+                            callType: type,
+                          }),
+                        });
+                        console.log("📞 Call notification sent to:", recipientId);
+                      } catch (error) {
+                        console.error("Failed to send call notification:", error);
+                      }
+                    }
+
+                    // Show pre-call settings
                     setPendingCallRoom(roomName);
                     setPendingCallType(type);
                     setShowPreCallSettings(true);

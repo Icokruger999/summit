@@ -14,6 +14,7 @@ import chatRequestsRoutes from "./routes/chatRequests.js";
 import chatsRoutes from "./routes/chats.js";
 import summitRoutes from "./routes/summit.js";
 import subscriptionsRoutes from "./routes/subscriptions.js";
+import chimeRoutes from "./routes/chime.js";
 import { messageNotifier } from "./lib/messageNotifier.js";
 import jwt from "jsonwebtoken";
 
@@ -164,6 +165,7 @@ app.use("/api/messages", checkSubscriptionAccess, messagesRoutes);
 app.use("/api/chat-requests", checkSubscriptionAccess, chatRequestsRoutes);
 app.use("/api/chats", checkSubscriptionAccess, chatsRoutes);
 app.use("/api/summit", checkSubscriptionAccess, summitRoutes);
+app.use("/api/chime", checkSubscriptionAccess, chimeRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
