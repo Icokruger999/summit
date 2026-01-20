@@ -1063,15 +1063,28 @@ export default function MessageThreadSimple({
                       <Edit2 className="w-4 h-4" />
                       Rename Group
                     </button>
-                    <button
-                      onClick={() => {
-                        handleDeleteChat();
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Leave Group
-                    </button>
+                    {/* Show Delete Group if user is creator, otherwise show Leave Group */}
+                    {chat.created_by === userId ? (
+                      <button
+                        onClick={() => {
+                          handleDeleteChat();
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Group
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          handleDeleteChat();
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Leave Group
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
