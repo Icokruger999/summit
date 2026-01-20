@@ -237,6 +237,28 @@ router.post("/group", authenticate, async (req: AuthRequest, res) => {
 
     console.log(`✅ Group chat created: ${chat.id}`);
 
+    // Get creator's name for notifications
+    const creatorInfo = await query(
+      `SELECT name, email FROM users WHERE id = $1`,
+      [userId]
+    );
+    const creatorName = creatorInfo.rows[0]?.name || creatorInfo.rows[0]?.email || "Someone";
+
+    // Send WebSocket notifications to all members except creator
+    const { messageNotifier } = await import("../lib/messageNotifier.js");
+    for (const memberId of memberIds) {
+      if (memberId !== userId) {
+        messageNotifier.notifyUser(memberId, {
+          type: "GROUP_ADDED",
+          chatId: chat.id,
+          chatName: chat.name,
+          creatorId: userId,
+          creatorName: creatorName,
+          timestamp: new Date().toISOString(),
+        }, "GROUP_ADDED");
+      }
+    }
+
     res.json({
       id: chat.id,
       name: chat.name,
@@ -306,7 +328,7 @@ router.post("/:chatId/members", authenticate, async (req: AuthRequest, res) => {
 
     // Verify user is a participant and chat is a group
     const chatCheck = await query(`
-      SELECT c.type
+      SELECT c.type, c.name
       FROM chats c
       INNER JOIN chat_participants cp ON c.id = cp.chat_id
       WHERE c.id = $1 AND cp.user_id = $2
@@ -320,6 +342,8 @@ router.post("/:chatId/members", authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Can only add members to group chats" });
     }
 
+    const chatName = chatCheck.rows[0].name;
+
     // Add new members
     for (const memberId of memberIds) {
       await query(
@@ -328,6 +352,26 @@ router.post("/:chatId/members", authenticate, async (req: AuthRequest, res) => {
          ON CONFLICT (chat_id, user_id) DO NOTHING`,
         [chatId, memberId]
       );
+    }
+
+    // Get adder's name for notifications
+    const adderInfo = await query(
+      `SELECT name, email FROM users WHERE id = $1`,
+      [userId]
+    );
+    const adderName = adderInfo.rows[0]?.name || adderInfo.rows[0]?.email || "Someone";
+
+    // Send WebSocket notifications to newly added members
+    const { messageNotifier } = await import("../lib/messageNotifier.js");
+    for (const memberId of memberIds) {
+      messageNotifier.notifyUser(memberId, {
+        type: "GROUP_ADDED",
+        chatId: chatId,
+        chatName: chatName,
+        addedBy: userId,
+        adderName: adderName,
+        timestamp: new Date().toISOString(),
+      }, "GROUP_ADDED");
     }
 
     res.json({ success: true, addedCount: memberIds.length });

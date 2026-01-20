@@ -251,6 +251,29 @@ export default function Dashboard({ user }: DashboardProps) {
     };
   }, [inCall, callRoom]);
 
+  // Listen for group added notifications
+  useEffect(() => {
+    const handleGroupAdded = (event: CustomEvent<any>) => {
+      const { chatId, chatName, creatorName } = event.detail;
+      
+      console.log('👥 Added to group:', chatName);
+      
+      // Show notification
+      setNotification({
+        message: `${creatorName} added you to "${chatName}"`,
+        type: "info",
+      });
+      
+      // Reload chats to show the new group
+      window.location.reload();
+    };
+
+    window.addEventListener('groupAdded' as any, handleGroupAdded as EventListener);
+    return () => {
+      window.removeEventListener('groupAdded' as any, handleGroupAdded as EventListener);
+    };
+  }, []);
+
   // Handle chat request accepted notification
   const handleChatRequestAccepted = (data: any) => {
     const requesteeName = data.requesteeName || "Someone";

@@ -131,6 +131,16 @@ export function useMessageWebSocket({
                 roomName: data.data.roomName,
               }
             }));
+          } else if (data.type === "GROUP_ADDED") {
+            console.log("👥 Received group added notification:", data.data);
+            // Dispatch event for being added to a group
+            window.dispatchEvent(new CustomEvent('groupAdded', {
+              detail: {
+                chatId: data.data.chatId,
+                chatName: data.data.chatName,
+                creatorName: data.data.creatorName || data.data.adderName,
+              }
+            }));
           } else if (data.type === "MESSAGES_READ") {
             console.log("✅ Received messages read notification:", data.data);
             // Dispatch event for messages being read (so sender can update statuses)
