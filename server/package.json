@@ -13,6 +13,7 @@
     "status:pm2": "pm2 status"
   },
   "dependencies": {
+    "@aws-sdk/client-chime-sdk-meetings": "^3.650.0",
     "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
