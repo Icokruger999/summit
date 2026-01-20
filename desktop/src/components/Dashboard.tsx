@@ -802,8 +802,8 @@ export default function Dashboard({ user }: DashboardProps) {
                   ].map(({ status, label, color }) => (
                     <button
                       key={status}
-                      onClick={() => {
-                        updateStatus(status);
+                      onClick={async () => {
+                        await updateStatus(status);
                         localStorage.setItem("status_manually_set", "true");
                         setShowStatusDropdown(false);
                         refetchPresence();
