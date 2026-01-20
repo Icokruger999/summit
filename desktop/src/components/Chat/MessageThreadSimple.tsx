@@ -118,10 +118,11 @@ export default function MessageThreadSimple({
       console.log("✅ Message is for current chat, adding immediately...");
       
       // Add message immediately from notification (no DB reload needed)
+      console.log("📝 Creating message from notification. SenderName:", notification.senderName, "SenderId:", notification.senderId);
       const newMessage: Message = {
         id: notification.messageId,
         senderId: notification.senderId,
-        senderName: notification.senderName || "Unknown",
+        senderName: notification.senderName || notification.sender_name || "Unknown",
         content: notification.content,
         timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
         type: (notification.type || "text") as "text" | "file",
