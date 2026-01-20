@@ -146,25 +146,30 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
   }, [remoteVideoTiles, bindVideoElement]);
 
   const handleLeave = () => {
-    // Notify other participants that call is ending via WebSocket
-    try {
-      const token = getAuthToken();
-      if (token) {
-        fetch(`${SERVER_URL}/api/chime/end-call`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            roomName: roomName,
-          }),
-        }).catch(err => console.error("Failed to notify call end:", err));
+    const totalParticipants = remoteAttendees.size + 1; // +1 for local user
+    
+    // If there are only 2 people (1 remote + you), end the call for everyone
+    if (totalParticipants <= 2) {
+      try {
+        const token = getAuthToken();
+        if (token) {
+          fetch(`${SERVER_URL}/api/chime/end-call`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              roomName: roomName,
+            }),
+          }).catch(err => console.error("Failed to notify call end:", err));
+        }
+      } catch (error) {
+        console.error("Error notifying call end:", error);
       }
-    } catch (error) {
-      console.error("Error notifying call end:", error);
     }
     
+    // Always disconnect yourself
     disconnect();
     onLeave();
   };
@@ -254,7 +259,7 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
             <button
               onClick={handleLeave}
               className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
-              title="End Call"
+              title={remoteAttendees.size >= 1 ? "Leave Call" : "End Call"}
             >
               <PhoneOff className="w-5 h-5" />
             </button>
@@ -473,7 +478,7 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
           <button
             onClick={handleLeave}
             className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
-            title="Leave"
+            title={remoteAttendees.size >= 1 ? "Leave Call" : "End Call"}
           >
             <PhoneOff className="w-5 h-5" />
           </button>

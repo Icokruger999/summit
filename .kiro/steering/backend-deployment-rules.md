@@ -35,13 +35,14 @@ pm2 restart summit-backend
 ```
 
 ## If Server Breaks:
-1. Restore from backup with chime: `cp -r /var/www/summit-backup-with-chime-1768948233/dist/* /var/www/summit/dist/`
-   (This backup has: PostgreSQL presence, Chime routes, no Supabase, no subscription middleware)
+1. Restore from latest backup: `cp -r /var/www/summit-backup-with-chime-1768948605/dist/* /var/www/summit/dist/`
+   (This backup has: PostgreSQL presence, Chime routes with end-call, no Supabase, no subscription middleware)
 2. Restart PM2: `export HOME=/home/ubuntu && pm2 restart summit-backend`
 3. Test: `curl http://localhost:4000/health`
 
 ## Available Backups:
-- `/var/www/summit-backup-with-chime-1768948233/dist/` - LATEST (has Chime, PostgreSQL, no Supabase)
+- `/var/www/summit-backup-with-chime-1768948605/dist/` - LATEST (has Chime with end-call, PostgreSQL, no Supabase)
+- `/var/www/summit-backup-with-chime-1768948233/dist/` - Previous (has Chime, PostgreSQL, no Supabase)
 - `/var/www/summit-backup-clean-1768947835/dist/` - Clean (no Chime, PostgreSQL, no Supabase)
 - `/var/www/summit-backup-1768663852/server/dist/` - OLD (has Supabase - don't use)
 

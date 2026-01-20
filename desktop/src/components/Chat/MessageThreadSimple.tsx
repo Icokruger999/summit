@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle } from "lucide-react";
+import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
@@ -52,6 +52,10 @@ export default function MessageThreadSimple({
   const [myStatus, setMyStatus] = useState<"online" | "offline" | "away" | "busy" | "dnd">("online");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [messageMenuOpen, setMessageMenuOpen] = useState<string | null>(null);
+  const messageMenuRef = useRef<HTMLDivElement>(null);
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -59,13 +63,16 @@ export default function MessageThreadSimple({
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
         setShowStatusDropdown(false);
       }
+      if (messageMenuRef.current && !messageMenuRef.current.contains(event.target as Node)) {
+        setMessageMenuOpen(null);
+      }
     };
 
-    if (showStatusDropdown) {
+    if (showStatusDropdown || messageMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [showStatusDropdown]);
+  }, [showStatusDropdown, messageMenuOpen]);
 
   // Fetch my current status
   useEffect(() => {
@@ -900,6 +907,43 @@ export default function MessageThreadSimple({
     }
   };
 
+  // Handle edit message
+  const handleEditMessage = async (messageId: string) => {
+    if (!editingContent.trim() || !dbChatId) return;
+
+    try {
+      await messagesApi.editMessage(messageId, editingContent.trim());
+      
+      // Update message in state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, content: editingContent.trim() } : msg
+        )
+      );
+      
+      setEditingMessageId(null);
+      setEditingContent("");
+      setMessageMenuOpen(null);
+    } catch (error) {
+      console.error("Error editing message:", error);
+    }
+  };
+
+  // Handle delete message
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!dbChatId) return;
+
+    try {
+      await messagesApi.deleteMessage(messageId);
+      
+      // Remove message from state
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      setMessageMenuOpen(null);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Chat Header */}
@@ -981,7 +1025,7 @@ export default function MessageThreadSimple({
                 return (
                   <div
                     key={message.id}
-                    className="flex justify-start mb-4"
+                    className="flex justify-start mb-4 group"
                   >
                     {/* Profile picture */}
                     <div className="flex-shrink-0 mr-3">
@@ -1004,30 +1048,98 @@ export default function MessageThreadSimple({
                         </span>
                       </div>
                       {/* Message bubble */}
-                      <div className={`relative px-4 py-3 rounded-lg shadow-sm ${
-                        isOwnMessage
-                          ? "bg-blue-100 text-gray-900"
-                          : "bg-white text-gray-900 border border-gray-200"
-                      }`}>
-                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                          {message.content}
-                        </p>
-                        {isOwnMessage && message.status && (
-                          <div className="flex items-center gap-1 text-xs mt-1 text-gray-500">
-                            {message.status === "sending" && (
-                              <Clock className="w-3 h-3 inline animate-pulse" />
-                            )}
-                            {message.status === "sent" && (
-                              <Check className="w-3 h-3 inline" />
-                            )}
-                            {message.status === "received" && (
-                              <CheckCheck className="w-3 h-3 inline" />
-                            )}
-                            {message.status === "read" && (
-                              <CheckCheck className="w-3 h-3 inline text-blue-500" />
-                            )}
-                            {message.status === "failed" && (
-                              <X className="w-3 h-3 inline text-red-500" />
+                      <div className="relative flex items-start gap-2">
+                        <div className={`relative px-4 py-3 rounded-lg shadow-sm ${
+                          isOwnMessage
+                            ? "bg-blue-100 text-gray-900"
+                            : "bg-white text-gray-900 border border-gray-200"
+                        }`}>
+                          {editingMessageId === message.id ? (
+                            <div className="flex flex-col gap-2">
+                              <textarea
+                                value={editingContent}
+                                onChange={(e) => setEditingContent(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                rows={2}
+                                autoFocus
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditMessage(message.id)}
+                                  className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(null);
+                                    setEditingContent("");
+                                  }}
+                                  className="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                              {message.content}
+                            </p>
+                          )}
+                          {isOwnMessage && message.status && !editingMessageId && (
+                            <div className="flex items-center gap-1 text-xs mt-1 text-gray-500">
+                              {message.status === "sending" && (
+                                <Clock className="w-3 h-3 inline animate-pulse" />
+                              )}
+                              {message.status === "sent" && (
+                                <Check className="w-3 h-3 inline" />
+                              )}
+                              {message.status === "received" && (
+                                <CheckCheck className="w-3 h-3 inline" />
+                              )}
+                              {message.status === "read" && (
+                                <CheckCheck className="w-3 h-3 inline text-blue-500" />
+                              )}
+                              {message.status === "failed" && (
+                                <X className="w-3 h-3 inline text-red-500" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {/* 3-dot menu (only for own messages) */}
+                        {isOwnMessage && !editingMessageId && (
+                          <div className="relative" ref={messageMenuOpen === message.id ? messageMenuRef : null}>
+                            <button
+                              onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-500" />
+                            </button>
+                            {messageMenuOpen === message.id && (
+                              <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(message.id);
+                                    setEditingContent(message.content);
+                                    setMessageMenuOpen(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm("Delete this message?")) {
+                                      handleDeleteMessage(message.id);
+                                    }
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 flex items-center gap-2"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
