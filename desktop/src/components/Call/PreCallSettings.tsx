@@ -164,176 +164,157 @@ export default function PreCallSettings({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-200 animate-in slide-in-from-bottom-4">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center z-50">
+      <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border border-white/10 animate-in slide-in-from-bottom-4">
+        <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Join {callType === "video" ? "Video" : "Audio"} Call</h2>
-              <p className="text-sm text-gray-500 mt-1">Configure your settings before joining</p>
+              <h2 className="text-3xl font-bold text-white">Ready to join?</h2>
+              <p className="text-sm text-gray-400 mt-2">{roomName}</p>
             </div>
             <button
               onClick={onCancel}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Cancel"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-6 h-6 text-gray-400 hover:text-white" />
             </button>
           </div>
 
-          <div className={`grid grid-cols-1 ${callType === "video" ? "lg:grid-cols-2" : ""} gap-6`}>
-            {/* Video Preview */}
-            {(callType === "video" || videoEnabled) && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Video className="w-4 h-4" />
-                  Video Preview
-                </h3>
-                <div className="relative bg-gray-900 rounded-xl overflow-hidden aspect-video">
-                  {videoEnabled ? (
-                    <video
-                      ref={videoPreviewRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <VideoOff className="w-12 h-12 text-gray-500 mx-auto mb-2" />
-                        <p className="text-sm text-gray-400">Video is off</p>
-                      </div>
+          {/* Large Video Preview */}
+          <div className="mb-8">
+            <div className="relative bg-black rounded-2xl overflow-hidden aspect-video shadow-2xl border border-white/10">
+              {videoEnabled ? (
+                <video
+                  ref={videoPreviewRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                  <div className="text-center">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-4xl font-bold text-white">
+                        {userName?.charAt(0).toUpperCase() || "U"}
+                      </span>
                     </div>
-                  )}
-                  {/* Toggle Video Button */}
-                  <button
-                    onClick={() => setVideoEnabled(!videoEnabled)}
-                    className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-                      videoEnabled
-                        ? "bg-red-500 hover:bg-red-600 text-white"
-                        : "bg-white/90 hover:bg-white text-gray-900"
-                    }`}
-                  >
-                    {videoEnabled ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-                    <span className="text-sm font-medium">
-                      {videoEnabled ? "Turn Off" : "Turn On"}
-                    </span>
-                  </button>
+                    <p className="text-xl text-white font-medium">{userName || "You"}</p>
+                    <p className="text-sm text-gray-400 mt-2">Camera is off</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
 
+          {/* Controls Bar */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            {/* Microphone Toggle */}
+            <button
+              onClick={() => setAudioEnabled(!audioEnabled)}
+              className={`p-5 rounded-full transition-all ${
+                audioEnabled
+                  ? "bg-gray-700 hover:bg-gray-600 text-white"
+                  : "bg-red-600 hover:bg-red-700 text-white"
+              }`}
+              title={audioEnabled ? "Mute" : "Unmute"}
+            >
+              {audioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+            </button>
+
+            {/* Video Toggle */}
+            <button
+              onClick={() => setVideoEnabled(!videoEnabled)}
+              className={`p-5 rounded-full transition-all ${
+                videoEnabled
+                  ? "bg-gray-700 hover:bg-gray-600 text-white"
+                  : "bg-red-600 hover:bg-red-700 text-white"
+              }`}
+              title={videoEnabled ? "Turn off camera" : "Turn on camera"}
+            >
+              {videoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+            </button>
+          </div>
+
+          {/* Device Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Settings */}
             <div className="space-y-4">
               {/* Audio Settings */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Mic className="w-4 h-4" />
-                    Microphone
-                  </h3>
-                  <button
-                    onClick={() => setAudioEnabled(!audioEnabled)}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium ${
-                      audioEnabled
-                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {audioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                    {audioEnabled ? "On" : "Off"}
-                  </button>
-                </div>
-                {audioEnabled && (
-                  <select
-                    value={selectedAudioInput}
-                    onChange={(e) => setSelectedAudioInput(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 bg-white text-gray-900"
-                  >
-                    {audioDevices
-                      .filter((d) => d.kind === "audioinput")
-                      .map((device) => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                  </select>
-                )}
-              </div>
-
-              {/* Video Settings - Show for video calls, or allow enabling for audio calls */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Video className="w-4 h-4" />
-                    Camera
-                  </h3>
-                  <button
-                    onClick={() => setVideoEnabled(!videoEnabled)}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium ${
-                      videoEnabled
-                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {videoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-                    {videoEnabled ? "On" : "Off"}
-                  </button>
-                </div>
-                {videoEnabled && (
-                  <select
-                    value={selectedVideoInput}
-                    onChange={(e) => setSelectedVideoInput(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 bg-white text-gray-900"
-                  >
-                    {videoDevices.map((device) => (
-                      <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {/* Speaker Settings */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Volume2 className="w-4 h-4" />
-                  Speakers
-                </h3>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Mic className="w-3 h-3" />
+                  Microphone
+                </label>
                 <select
-                  value={selectedAudioOutput}
-                  onChange={(e) => setSelectedAudioOutput(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 bg-white text-gray-900"
+                  value={selectedAudioInput}
+                  onChange={(e) => setSelectedAudioInput(e.target.value)}
+                  disabled={!audioEnabled}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {audioDevices
-                    .filter((d) => d.kind === "audiooutput")
+                    .filter((d) => d.kind === "audioinput")
                     .map((device) => (
                       <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Speaker ${device.deviceId.slice(0, 8)}`}
+                        {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
                       </option>
                     ))}
                 </select>
               </div>
             </div>
+
+            {/* Video Settings */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <Video className="w-3 h-3" />
+                Camera
+              </label>
+              <select
+                value={selectedVideoInput}
+                onChange={(e) => setSelectedVideoInput(e.target.value)}
+                disabled={!videoEnabled}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {videoDevices.map((device) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Speaker Settings */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <Volume2 className="w-3 h-3" />
+                Speakers
+              </label>
+              <select
+                value={selectedAudioOutput}
+                onChange={(e) => setSelectedAudioOutput(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm"
+              >
+                {audioDevices
+                  .filter((d) => d.kind === "audiooutput")
+                  .map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Speaker ${device.deviceId.slice(0, 8)}`}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
-            <button
-              onClick={onCancel}
-              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-            >
-              Cancel
-            </button>
+          <div className="flex items-center justify-center gap-4 pt-6 border-t border-white/10">
             <button
               onClick={handleJoin}
-              className="px-6 py-3 text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-xl hover:shadow-lg transition-all font-medium flex items-center gap-2"
+              className="px-8 py-4 text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all font-semibold text-lg flex items-center gap-3 shadow-lg hover:shadow-xl"
             >
-              <Phone className="w-4 h-4" />
-              Join {callType === "video" ? "Video" : "Audio"} Call
+              <Phone className="w-5 h-5" />
+              Join now
             </button>
           </div>
         </div>
