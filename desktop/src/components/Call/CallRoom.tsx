@@ -24,11 +24,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
     audioEnabled,
     videoEnabled,
     remoteVideoTiles,
+    remoteAttendees,
     localVideoElementRef
   } = useChime(onConnected); // Pass onConnected to useChime
 
   const remoteVideoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const hasConnectedRef = useRef(false);
+
+  // Get initials from name
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   useEffect(() => {
     if (roomName && !hasConnectedRef.current) {
@@ -102,62 +108,88 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
               {otherUserName || "Call"}
             </h2>
             <p className="text-gray-300 text-sm">
-              {remoteVideoTiles.size > 0 ? "Connected" : "Calling..."} • {remoteVideoTiles.size} participant{remoteVideoTiles.size !== 1 ? 's' : ''}
+              {remoteAttendees.size > 0 ? "In call" : "Waiting for others..."} • {remoteAttendees.size + 1} participant{remoteAttendees.size !== 0 ? 's' : ''}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Video Area */}
-      <div className="flex-1 flex items-center justify-center p-4 gap-4">
-        {/* Local Video */}
-        {callType === "video" && (
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-64 h-48">
-            <video
-              ref={localVideoElementRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-              You {!videoEnabled && "(Video Off)"}
+      {/* Video Area - Teams-like grid */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="flex flex-wrap items-center justify-center gap-4 max-w-6xl">
+          
+          {/* Local Video/Avatar (You) */}
+          <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500/50 w-80 h-60">
+            {videoEnabled ? (
+              <video
+                ref={localVideoElementRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-white">You</span>
+                </div>
+              </div>
+            )}
+            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+              <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
+                You {!audioEnabled && "🔇"}
+              </span>
             </div>
           </div>
-        )}
 
-        {/* Remote Videos */}
-        {Array.from(remoteVideoTiles.entries()).map(([tileId, attendeeId]) => (
-          <div key={tileId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-96 h-72">
-            <video
-              ref={(el) => {
-                if (el) {
-                  remoteVideoRefs.current.set(tileId, el);
-                  bindVideoElement(tileId, el);
-                }
-              }}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-              Participant {attendeeId.slice(-4)}
-            </div>
-          </div>
-        ))}
-
-        {/* No remote participants placeholder */}
-        {remoteVideoTiles.size === 0 && (
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-full max-w-4xl h-96">
-            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-sky-700 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl font-bold text-white/90 mb-4">📞</div>
-                <p className="text-white text-xl">Waiting for others to join...</p>
-                <p className="text-white/70 text-sm mt-2">Meeting ID: {meeting?.MeetingId?.slice(-8)}</p>
+          {/* Remote Participants - Show avatar if no video, video if they have it */}
+          {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => (
+            <div key={attendeeId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60">
+              {attendee.hasVideo && attendee.tileId !== undefined ? (
+                <video
+                  ref={(el) => {
+                    if (el && attendee.tileId !== undefined) {
+                      remoteVideoRefs.current.set(attendee.tileId, el);
+                      bindVideoElement(attendee.tileId, el);
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">
+                      {otherUserName ? getInitials(otherUserName) : "?"}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
+                  {otherUserName || "Participant"}
+                </span>
               </div>
             </div>
-          </div>
-        )}
+          ))}
+
+          {/* Show placeholder only if no one else has joined yet */}
+          {remoteAttendees.size === 0 && (
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60">
+              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                    <span className="text-2xl font-bold text-gray-400">
+                      {otherUserName ? getInitials(otherUserName) : "?"}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm">Waiting for {otherUserName || "participant"}...</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Controls */}

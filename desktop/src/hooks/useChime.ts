@@ -12,6 +12,14 @@ import {
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com";
 
+// Track remote attendees (with or without video)
+interface RemoteAttendee {
+  attendeeId: string;
+  externalUserId: string;
+  hasVideo: boolean;
+  tileId?: number;
+}
+
 export function useChime(onConnected?: () => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [meeting, setMeeting] = useState<any>(null);
@@ -19,6 +27,7 @@ export function useChime(onConnected?: () => void) {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [remoteVideoTiles, setRemoteVideoTiles] = useState<Map<number, string>>(new Map());
+  const [remoteAttendees, setRemoteAttendees] = useState<Map<string, RemoteAttendee>>(new Map());
   
   const meetingSessionRef = useRef<DefaultMeetingSession | null>(null);
   const deviceControllerRef = useRef<DefaultDeviceController | null>(null);
@@ -146,7 +155,7 @@ export function useChime(onConnected?: () => void) {
       // Set up audio/video observers
       const observer: AudioVideoObserver = {
         videoTileDidUpdate: (tileState: VideoTileState) => {
-          console.log("Video tile updated:", tileState.tileId, "Local:", tileState.localTile);
+          console.log("Video tile updated:", tileState.tileId, "Local:", tileState.localTile, "AttendeeId:", tileState.boundAttendeeId);
           
           if (!tileState.boundVideoElement) {
             if (tileState.localTile && localVideoElementRef.current) {
@@ -155,11 +164,27 @@ export function useChime(onConnected?: () => void) {
                 tileState.tileId,
                 localVideoElementRef.current
               );
-            } else if (!tileState.localTile) {
+            } else if (!tileState.localTile && tileState.boundAttendeeId) {
               // Remote video tile - store for rendering
               setRemoteVideoTiles((prev) => {
                 const newMap = new Map(prev);
                 newMap.set(tileState.tileId, tileState.boundAttendeeId || "");
+                return newMap;
+              });
+              
+              // Update attendee to show they have video
+              setRemoteAttendees((prev) => {
+                const newMap = new Map(prev);
+                const existing = newMap.get(tileState.boundAttendeeId!) || {
+                  attendeeId: tileState.boundAttendeeId!,
+                  externalUserId: "",
+                  hasVideo: false,
+                };
+                newMap.set(tileState.boundAttendeeId!, {
+                  ...existing,
+                  hasVideo: true,
+                  tileId: tileState.tileId,
+                });
                 return newMap;
               });
             }
@@ -169,7 +194,21 @@ export function useChime(onConnected?: () => void) {
           console.log("Video tile removed:", tileId);
           setRemoteVideoTiles((prev) => {
             const newMap = new Map(prev);
+            const attendeeId = prev.get(tileId);
             newMap.delete(tileId);
+            
+            // Update attendee to show they no longer have video
+            if (attendeeId) {
+              setRemoteAttendees((prevAttendees) => {
+                const newAttendees = new Map(prevAttendees);
+                const existing = newAttendees.get(attendeeId);
+                if (existing) {
+                  newAttendees.set(attendeeId, { ...existing, hasVideo: false, tileId: undefined });
+                }
+                return newAttendees;
+              });
+            }
+            
             return newMap;
           });
         },
@@ -182,6 +221,38 @@ export function useChime(onConnected?: () => void) {
       };
 
       meetingSession.audioVideo.addObserver(observer);
+      
+      // Subscribe to attendee presence changes
+      meetingSession.audioVideo.realtimeSubscribeToAttendeeIdPresence(
+        (attendeeId: string, present: boolean, externalUserId?: string) => {
+          console.log("Attendee presence changed:", attendeeId, "present:", present, "externalUserId:", externalUserId);
+          
+          if (present) {
+            // Attendee joined
+            setRemoteAttendees((prev) => {
+              const newMap = new Map(prev);
+              // Don't add ourselves
+              if (attendeeId !== attendeeData.AttendeeId) {
+                newMap.set(attendeeId, {
+                  attendeeId,
+                  externalUserId: externalUserId || "",
+                  hasVideo: false,
+                });
+                console.log("Remote attendee joined:", attendeeId, "Total:", newMap.size);
+              }
+              return newMap;
+            });
+          } else {
+            // Attendee left
+            setRemoteAttendees((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(attendeeId);
+              console.log("Remote attendee left:", attendeeId, "Total:", newMap.size);
+              return newMap;
+            });
+          }
+        }
+      );
 
       // Start audio input (microphone)
       const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
@@ -258,6 +329,7 @@ export function useChime(onConnected?: () => void) {
     setAttendee(null);
     setIsConnected(false);
     setRemoteVideoTiles(new Map());
+    setRemoteAttendees(new Map());
     setVideoEnabled(false);
     setAudioEnabled(true);
   }, [meeting]);
@@ -311,6 +383,7 @@ export function useChime(onConnected?: () => void) {
     audioEnabled,
     videoEnabled,
     remoteVideoTiles,
+    remoteAttendees,
     localVideoElementRef,
   };
 }
