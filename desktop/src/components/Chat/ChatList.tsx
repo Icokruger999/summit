@@ -522,7 +522,7 @@ export default function ChatList({
                                 })()}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center justify-between mb-0.5">
                                   <h3 className="font-semibold text-gray-900 truncate">{chat.name}</h3>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {chat.unreadCount && chat.unreadCount > 0 && (
@@ -537,6 +537,30 @@ export default function ChatList({
                                     )}
                                   </div>
                                 </div>
+                                {/* Status text */}
+                                {chat.userIds && chat.userIds.length > 0 && (() => {
+                                  const otherUserId = chat.userIds[0];
+                                  const status = presenceMap[otherUserId] || "offline";
+                                  const statusLabels: Record<string, string> = {
+                                    online: "Online",
+                                    offline: "Offline",
+                                    away: "Away",
+                                    busy: "Busy",
+                                    dnd: "Do Not Disturb",
+                                  };
+                                  const statusColors: Record<string, string> = {
+                                    online: "text-green-600",
+                                    offline: "text-gray-400",
+                                    away: "text-yellow-600",
+                                    busy: "text-red-500",
+                                    dnd: "text-purple-500",
+                                  };
+                                  return (
+                                    <p className={`text-xs ${statusColors[status]} mb-0.5`}>
+                                      {statusLabels[status]}
+                                    </p>
+                                  );
+                                })()}
                                 {chat.last_message && (
                                   <p className={`text-sm truncate ${chat.unreadCount && chat.unreadCount > 0 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
                                     {chat.last_message_sender_id === userId ? (

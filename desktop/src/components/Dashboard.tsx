@@ -9,7 +9,7 @@ import NotificationCenter from "./Notifications/NotificationCenter";
 import Contacts from "./Chat/Contacts";
 import ChatRequests from "./Chat/ChatRequests";
 import { MessageSquare, Calendar, User, Video, Settings, ChevronDown, Circle, PhoneOff, Phone, Users, UserPlus } from "lucide-react";
-import logoImage from "../assets/logo.png";
+import iconImage from "../assets/icon.png";
 import { useUpdatePresence, usePresence } from "../hooks/usePresence";
 import { sounds } from "../lib/sounds";
 import NotificationToast from "./NotificationToast";
@@ -760,7 +760,7 @@ export default function Dashboard({ user }: DashboardProps) {
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                <img src={logoImage} alt="Summit Logo" className="w-full h-full object-contain" />
+                <img src={iconImage} alt="Summit Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text text-transparent">
