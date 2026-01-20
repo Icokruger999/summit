@@ -61,16 +61,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
 
   if (!isConnected) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-sky-50">
-        <div className="text-center glass-card p-8 rounded-2xl">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-gray-900 text-lg font-semibold mb-2">Connecting to {callType === "audio" ? "call" : "meeting"}...</div>
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div className="text-center bg-gray-900/95 backdrop-blur-xl p-12 rounded-2xl border border-white/10 max-w-md">
+          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <div className="text-white text-2xl font-semibold mb-2">Connecting...</div>
+          <div className="text-gray-400 text-sm mb-6">Setting up your {callType === "audio" ? "call" : "meeting"}</div>
           {error && (
-            <div className="text-red-600 text-sm mt-2 bg-red-50 px-4 py-2 rounded-lg">{error}</div>
+            <div className="text-red-400 text-sm mt-4 bg-red-900/20 px-4 py-3 rounded-lg border border-red-500/30">{error}</div>
           )}
           <button
             onClick={handleLeave}
-            className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="mt-6 px-8 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
           >
             Cancel
           </button>
