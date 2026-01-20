@@ -269,7 +269,21 @@ router.post("/:id/accept", authenticate, async (req: AuthRequest, res) => {
       `, [reverseCheck.rows[0].id]);
     }
 
-    res.json({ success: true });
+    // Create a direct chat between the two users so it appears in conversations
+    let chatId = null;
+    try {
+      const chatResult = await query(
+        `SELECT get_or_create_direct_chat($1, $2) as chat_id`,
+        [userId, request.requester_id]
+      );
+      chatId = chatResult.rows[0]?.chat_id;
+      console.log(`✅ Created/found chat ${chatId} for accepted contact request`);
+    } catch (chatError) {
+      console.error("Error creating chat for accepted request:", chatError);
+      // Don't fail the accept if chat creation fails
+    }
+
+    res.json({ success: true, chatId });
   } catch (error: any) {
     console.error("Error accepting chat request:", error);
     res.status(500).json({ error: error.message });

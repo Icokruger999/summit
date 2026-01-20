@@ -1001,7 +1001,8 @@ export default function Dashboard({ user }: DashboardProps) {
                   currentUserId={user.id}
                   onNewRequest={handleNewChatRequest}
                   onRequestAccepted={() => {
-                    // Refresh contacts if needed
+                    // Reload chats to show the new conversation
+                    window.dispatchEvent(new CustomEvent('reloadChats'));
                   }}
                 />
             </div>
