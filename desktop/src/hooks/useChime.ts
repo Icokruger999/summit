@@ -291,25 +291,38 @@ export function useChime(onConnected?: () => void) {
       meetingSession.audioVideo.realtimeSubscribeToVolumeIndicator(myAttendeeId, volumeCallback);
 
       // Start audio input (microphone)
-      const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
-      console.log("Audio input devices:", audioInputDevices.length);
-      if (audioInputDevices.length > 0) {
-        await meetingSession.audioVideo.startAudioInput(audioInputDevices[0].deviceId);
-        console.log("Audio input started:", audioInputDevices[0].label);
-      } else {
-        console.warn("No audio input devices found");
+      try {
+        const audioInputDevices = await meetingSession.audioVideo.listAudioInputDevices();
+        console.log("Audio input devices:", audioInputDevices.length);
+        if (audioInputDevices.length > 0) {
+          await meetingSession.audioVideo.startAudioInput(audioInputDevices[0].deviceId);
+          console.log("Audio input started:", audioInputDevices[0].label);
+        } else {
+          console.warn("No audio input devices found - call will work but you won't be heard");
+        }
+      } catch (deviceError: any) {
+        console.error("Error accessing microphone:", deviceError);
+        // Don't fail the call - continue without microphone
+        // The user can still hear others
+        if (deviceError.name === "NotAllowedError" || deviceError.message?.includes("Permission")) {
+          console.warn("Microphone permission denied - please allow microphone access in your browser settings");
+        }
       }
 
       // Set up audio output device
-      const audioOutputDevices = await meetingSession.audioVideo.listAudioOutputDevices();
-      console.log("Audio output devices:", audioOutputDevices.length);
-      if (audioOutputDevices.length > 0) {
-        try {
-          await meetingSession.audioVideo.chooseAudioOutput(audioOutputDevices[0].deviceId);
-          console.log("Audio output device selected:", audioOutputDevices[0].label);
-        } catch (outputError) {
-          console.warn("Could not select audio output device:", outputError);
+      try {
+        const audioOutputDevices = await meetingSession.audioVideo.listAudioOutputDevices();
+        console.log("Audio output devices:", audioOutputDevices.length);
+        if (audioOutputDevices.length > 0) {
+          try {
+            await meetingSession.audioVideo.chooseAudioOutput(audioOutputDevices[0].deviceId);
+            console.log("Audio output device selected:", audioOutputDevices[0].label);
+          } catch (outputError) {
+            console.warn("Could not select audio output device:", outputError);
+          }
         }
+      } catch (outputListError) {
+        console.warn("Could not list audio output devices:", outputListError);
       }
 
       // Start the session FIRST (before binding audio output)

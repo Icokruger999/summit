@@ -111,7 +111,14 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
       setError(null);
       connect(roomName).catch((error) => {
         console.error("Failed to connect to Chime:", error);
-        setError(`Failed to connect: ${error.message || "Unknown error"}`);
+        // Provide helpful error messages
+        let errorMessage = error.message || "Unknown error";
+        if (errorMessage.includes("device") || errorMessage.includes("NotAllowedError") || errorMessage.includes("Permission")) {
+          errorMessage = "Microphone access denied. Please allow microphone access in your browser settings and try again.";
+        } else if (errorMessage.includes("NotFoundError")) {
+          errorMessage = "No microphone found. Please connect a microphone and try again.";
+        }
+        setError(errorMessage);
         hasConnectedRef.current = false; // Allow retry on error
       });
     }
