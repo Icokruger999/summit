@@ -69,8 +69,11 @@ export function useChime() {
 
         if (existingMeetingResponse.ok) {
           const { meeting: existingMeeting } = await existingMeetingResponse.json();
-          meetingData = existingMeeting;
-          console.log("Joining existing meeting:", meetingData.meetingId);
+          // The backend returns the meeting with MeetingId (uppercase)
+          if (existingMeeting && existingMeeting.MeetingId) {
+            meetingData = existingMeeting;
+            console.log("Joining existing meeting:", meetingData.MeetingId);
+          }
         }
       } catch (error) {
         // Meeting doesn't exist, will create new one
@@ -108,7 +111,7 @@ export function useChime() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ meetingId: meetingData.MeetingId || meetingData.meetingId }),
+        body: JSON.stringify({ meetingId: meetingData.MeetingId }),
       });
 
       if (!attendeeResponse.ok) {
