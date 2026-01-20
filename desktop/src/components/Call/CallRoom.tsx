@@ -68,6 +68,12 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
           {error && (
             <div className="text-red-600 text-sm mt-2 bg-red-50 px-4 py-2 rounded-lg">{error}</div>
           )}
+          <button
+            onClick={handleLeave}
+            className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
