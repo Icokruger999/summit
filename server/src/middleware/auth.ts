@@ -2,7 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { getUserById } from "../lib/db.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+// JWT_SECRET is read at runtime to ensure dotenv has loaded
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === "your-secret-key-change-in-production") {
+    console.error("❌ JWT_SECRET not properly configured!");
+  }
+  return secret || "your-secret-key-change-in-production";
+}
 
 export interface AuthRequest extends Request {
   user?: {
@@ -25,6 +32,7 @@ export async function authenticate(
     }
 
     const token = authHeader.substring(7);
+    const JWT_SECRET = getJwtSecret();
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
