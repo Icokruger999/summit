@@ -723,8 +723,9 @@ export default function Dashboard({ user }: DashboardProps) {
 
   return (
     <>
-      {/* Subscription Lock Screen - blocks all access if trial expired */}
+      {/* Subscription disabled for now
       <SubscriptionLockScreen userId={user?.id || ""} />
+      */}
       
       {notification && (
         <NotificationToast
@@ -735,23 +736,24 @@ export default function Dashboard({ user }: DashboardProps) {
         />
       )}
       
-      {/* Subscription Modal */}
+      {/* Subscription Modal - disabled for now
       <SubscriptionModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
         onSubscriptionSelected={() => {
-          // Refresh page after subscription selected
           window.location.reload();
         }}
       />
+      */}
       
       <div className="h-screen flex flex-col bg-white">
       
-      {/* Trial Banner - shows hours remaining */}
+      {/* Trial Banner - disabled for now
       <TrialBanner 
         userId={user?.id || ""} 
         onSelectPlan={() => setShowSubscriptionModal(true)}
       />
+      */}
       
       {/* Header */}
       <header className="glass-frosty shadow-sm border-b border-white/50">
