@@ -118,10 +118,19 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
     );
 
     // Get participants in the chat (excluding sender - they already have the message)
-    const participants = await query(
-      `SELECT user_id FROM chat_participants WHERE chat_id = $1 AND user_id != $2`,
-      [chatId, userId]
-    );
+    // Also get sender's name for the notification
+    const [participants, senderInfo] = await Promise.all([
+      query(
+        `SELECT user_id FROM chat_participants WHERE chat_id = $1 AND user_id != $2`,
+        [chatId, userId]
+      ),
+      query(
+        `SELECT name, email FROM users WHERE id = $1`,
+        [userId]
+      )
+    ]);
+
+    const senderName = senderInfo.rows[0]?.name || senderInfo.rows[0]?.email || "Unknown";
 
     // Send real-time notification to other participants only (sender already has message optimistically)
     if (participants.rows.length > 0) {
@@ -130,6 +139,7 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
         chatId,
         messageId: id,
         senderId: userId,
+        senderName,
         content,
         type,
         timestamp: new Date().toISOString(),

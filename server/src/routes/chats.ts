@@ -70,6 +70,10 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
       if (row.type === "direct" && row.other_participant) {
         chat.name = row.other_participant.name || row.other_participant.email;
         chat.other_user = row.other_participant;
+        // Also include flat fields for frontend compatibility
+        chat.other_user_id = row.other_participant.id;
+        chat.other_user_name = row.other_participant.name;
+        chat.other_user_email = row.other_participant.email;
       }
 
       // Include last message sender ID
