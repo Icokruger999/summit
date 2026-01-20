@@ -12,7 +12,7 @@ import {
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com";
 
-export function useChime() {
+export function useChime(onConnected?: () => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [meeting, setMeeting] = useState<any>(null);
   const [attendee, setAttendee] = useState<any>(null);
@@ -163,6 +163,12 @@ export function useChime() {
             return newMap;
           });
         },
+        audioVideoDidStart: () => {
+          console.log("Audio/Video started - meeting is active");
+        },
+        audioVideoDidStop: (sessionStatus) => {
+          console.log("Audio/Video stopped:", sessionStatus);
+        },
       };
 
       meetingSession.audioVideo.addObserver(observer);
@@ -184,6 +190,11 @@ export function useChime() {
       setIsConnected(true);
       isConnectingRef.current = false;
       console.log("Chime session started successfully");
+      
+      // Call onConnected callback if provided
+      if (onConnected) {
+        onConnected();
+      }
       
     } catch (error) {
       isConnectingRef.current = false;
