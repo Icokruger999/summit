@@ -466,47 +466,86 @@ export default function Dashboard({ user }: DashboardProps) {
 
           {/* Call Controls */}
           <div className="flex items-center gap-6">
-            {/* Decline Button */}
-            <button
-              onClick={() => {
-                // Stop ringtone
-                import("../lib/sounds").then(({ stopCallRinging }) => {
-                  stopCallRinging();
-                });
+            {/* For incoming calls (pendingCallRoom exists) - show Accept/Decline */}
+            {pendingCallRoom ? (
+              <>
+                {/* Decline Button */}
+                <button
+                  onClick={() => {
+                    // Stop ringtone
+                    import("../lib/sounds").then(({ stopCallRinging }) => {
+                      stopCallRinging();
+                    });
+                    
+                    // Cancel call
+                    if (callTimeoutRef.current) {
+                      clearTimeout(callTimeoutRef.current);
+                    }
+                    setIsCalling(false);
+                    setCallingUser(null);
+                    setPendingCallRoom(null);
+                  }}
+                  className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                  title="Decline"
+                >
+                  <PhoneOff className="w-8 h-8 text-white" />
+                </button>
                 
-                // Cancel call
-                if (callTimeoutRef.current) {
-                  clearTimeout(callTimeoutRef.current);
-                }
-                setIsCalling(false);
-                setCallingUser(null);
-                setPendingCallRoom(null);
-              }}
-              className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-              title="Decline"
-            >
-              <PhoneOff className="w-8 h-8 text-white" />
-            </button>
-            
-            {/* Accept Button */}
-            <button
-              onClick={() => {
-                // Stop ringtone
-                import("../lib/sounds").then(({ stopCallRinging }) => {
-                  stopCallRinging();
-                });
+                {/* Accept Button */}
+                <button
+                  onClick={() => {
+                    // Stop ringtone
+                    import("../lib/sounds").then(({ stopCallRinging }) => {
+                      stopCallRinging();
+                    });
+                    
+                    // Accept call - go to pre-call settings
+                    if (pendingCallRoom) {
+                      setIsCalling(false);
+                      setShowPreCallSettings(true);
+                    }
+                  }}
+                  className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                  title="Accept"
+                >
+                  <Phone className="w-8 h-8 text-white" />
+                </button>
+              </>
+            ) : (
+              <>
+                {/* For outgoing calls - show Cancel and Join */}
+                {/* Cancel Button */}
+                <button
+                  onClick={() => {
+                    if (callTimeoutRef.current) {
+                      clearTimeout(callTimeoutRef.current);
+                    }
+                    setIsCalling(false);
+                    setCallingUser(null);
+                    setPendingCallRoom(null);
+                  }}
+                  className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                  title="Cancel"
+                >
+                  <PhoneOff className="w-8 h-8 text-white" />
+                </button>
                 
-                // Accept call - go to pre-call settings
-                if (pendingCallRoom) {
-                  setIsCalling(false);
-                  setShowPreCallSettings(true);
-                }
-              }}
-              className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-              title="Accept"
-            >
-              <Phone className="w-8 h-8 text-white" />
-            </button>
+                {/* Join Button - for caller to join when ready */}
+                <button
+                  onClick={() => {
+                    if (callTimeoutRef.current) {
+                      clearTimeout(callTimeoutRef.current);
+                    }
+                    setIsCalling(false);
+                    setShowPreCallSettings(true);
+                  }}
+                  className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                  title="Join now"
+                >
+                  <Phone className="w-8 h-8 text-white" />
+                </button>
+              </>
+            )}
           </div>
           
           {/* Call Type Badge */}
@@ -514,12 +553,16 @@ export default function Dashboard({ user }: DashboardProps) {
             {callType === "video" ? (
               <>
                 <Video className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-700">Incoming Video Call</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {pendingCallRoom ? "Incoming Video Call" : "Video Call"}
+                </span>
               </>
             ) : (
               <>
                 <Phone className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-700">Incoming Audio Call</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {pendingCallRoom ? "Incoming Audio Call" : "Audio Call"}
+                </span>
               </>
             )}
           </div>
@@ -925,10 +968,23 @@ export default function Dashboard({ user }: DashboardProps) {
                       console.warn("⚠️ Could not find recipient ID for call notification");
                     }
 
-                    // Show pre-call settings
+                    // Show "calling..." screen (don't join yet - wait for them to answer)
+                    setCallingUser(recipientName);
+                    setCallType(type);
                     setPendingCallRoom(roomName);
                     setPendingCallType(type);
-                    setShowPreCallSettings(true);
+                    setIsCalling(true);
+                    
+                    // Auto-cancel after 60 seconds if no answer
+                    callTimeoutRef.current = setTimeout(() => {
+                      setIsCalling(false);
+                      setCallingUser(null);
+                      setPendingCallRoom(null);
+                      setNotification({
+                        message: "Call not answered",
+                        type: "info",
+                      });
+                    }, 60000);
                   }}
                   onMessageSent={(chatId, message, timestamp) => {
                     // Message sent - ChatList will update via custom event
