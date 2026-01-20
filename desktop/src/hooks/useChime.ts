@@ -235,19 +235,9 @@ export function useChime(onConnected?: () => void) {
       meetingSessionRef.current = null;
     }
 
-    if (meeting) {
-      try {
-        const token = getAuthToken();
-        await fetch(`${SERVER_URL}/api/chime/meeting/${meeting.MeetingId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      } catch (error) {
-        console.error("Error ending meeting:", error);
-      }
-    }
+    // DON'T delete the meeting - let it expire naturally or let the backend clean it up
+    // This allows other participants to join even after one person leaves
+    console.log("Disconnected from meeting, but leaving it active for other participants");
     
     setMeeting(null);
     setAttendee(null);
