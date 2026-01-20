@@ -102,7 +102,17 @@ export function useChime(onConnected?: () => void) {
         console.log("Meeting created:", meetingData.MeetingId);
       }
 
+      // Validate meeting data has required fields
+      if (!meetingData.MeetingId || !meetingData.MediaPlacement) {
+        console.error("Invalid meeting data:", meetingData);
+        throw new Error("Meeting data is missing required fields (MeetingId or MediaPlacement)");
+      }
+
       setMeeting(meetingData);
+      console.log("Meeting data validated:", {
+        MeetingId: meetingData.MeetingId,
+        hasMediaPlacement: !!meetingData.MediaPlacement,
+      });
 
       // Create attendee for this meeting
       const attendeeResponse = await fetch(`${SERVER_URL}/api/chime/attendee`, {
@@ -187,18 +197,24 @@ export function useChime(onConnected?: () => void) {
 
       // Start the session
       meetingSession.audioVideo.start();
+      
+      // Set connected state immediately
       setIsConnected(true);
       isConnectingRef.current = false;
       console.log("Chime session started successfully");
+      console.log("Meeting ID:", meetingData.MeetingId);
+      console.log("Attendee ID:", attendeeData.AttendeeId);
       
       // Call onConnected callback if provided
       if (onConnected) {
+        console.log("Calling onConnected callback");
         onConnected();
       }
       
     } catch (error) {
       isConnectingRef.current = false;
       console.error("Failed to connect to Chime:", error);
+      console.error("Error details:", error);
       throw error;
     }
   }, [isConnected]);
