@@ -47,6 +47,7 @@ export default function Dashboard({ user }: DashboardProps) {
   const callStartTimeRef = useRef<number | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "info" | "warning" | "error" } | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [otherUserName, setOtherUserName] = useState<string | null>(null); // Track who we're calling
   
   // Track user presence
   const { updateStatus } = useUpdatePresence();
@@ -172,19 +173,34 @@ export default function Dashboard({ user }: DashboardProps) {
   // Listen for incoming call notifications
   useEffect(() => {
     const handleIncomingCall = (event: CustomEvent<any>) => {
-      const { callerId, callerName, callType } = event.detail;
+      const { callerId, callerName, callType, roomName } = event.detail;
+      
+      // Play ringtone
+      import("../lib/sounds").then(({ startCallRinging }) => {
+        startCallRinging();
+      });
       
       // Show desktop notification for incoming call
       const notification = showCallNotification(callerName || "Someone", callType || "video");
       
       // Set up call state
       setCallingUser(callerName || "Someone");
+      setOtherUserName(callerName || "Someone"); // Store for call screen
       setCallType(callType || "video");
+      setPendingCallRoom(roomName); // Store the room name for accepting
       setIsCalling(true);
       
       // Auto-dismiss notification after 30 seconds
       setTimeout(() => {
         if (notification) notification.close();
+        // Stop ringtone if call not answered
+        import("../lib/sounds").then(({ stopCallRinging }) => {
+          stopCallRinging();
+        });
+        setIsCalling(false);
+        setCallingUser(null);
+        setPendingCallRoom(null);
+        setOtherUserName(null);
       }, 30000);
     };
 
@@ -443,49 +459,69 @@ export default function Dashboard({ user }: DashboardProps) {
           
           {/* Calling Status */}
           <div className="mb-12">
-            <p className="text-gray-600 text-lg font-medium shimmer-text">calling</p>
+            <p className="text-gray-600 text-lg font-medium shimmer-text">
+              {pendingCallRoom ? "Incoming call" : "calling"}
+            </p>
           </div>
 
           {/* Call Controls */}
-          <div className="flex flex-col items-center gap-6">
-            {/* Cancel Button - Always visible during call setup */}
+          <div className="flex items-center gap-6">
+            {/* Decline Button */}
             <button
               onClick={() => {
-                // Cancel call on both sides via WebSocket
-                if (callRoom) {
-                  // Send cancel notification to other user
-                  const cancelEvent = new CustomEvent('callCancelled', {
-                    detail: { roomName: callRoom, cancelledBy: user?.id }
-                  });
-                  window.dispatchEvent(cancelEvent);
-                }
+                // Stop ringtone
+                import("../lib/sounds").then(({ stopCallRinging }) => {
+                  stopCallRinging();
+                });
                 
+                // Cancel call
                 if (callTimeoutRef.current) {
                   clearTimeout(callTimeoutRef.current);
                 }
                 setIsCalling(false);
                 setCallingUser(null);
-                setCallRoom(null);
+                setPendingCallRoom(null);
               }}
               className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+              title="Decline"
             >
               <PhoneOff className="w-8 h-8 text-white" />
             </button>
             
-            {/* Call Type Badge */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200/50">
-              {callType === "video" ? (
-                <>
-                  <Video className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">Video Call</span>
-                </>
-              ) : (
-                <>
-                  <Phone className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">Audio Call</span>
-                </>
-              )}
-            </div>
+            {/* Accept Button */}
+            <button
+              onClick={() => {
+                // Stop ringtone
+                import("../lib/sounds").then(({ stopCallRinging }) => {
+                  stopCallRinging();
+                });
+                
+                // Accept call - go to pre-call settings
+                if (pendingCallRoom) {
+                  setIsCalling(false);
+                  setShowPreCallSettings(true);
+                }
+              }}
+              className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+              title="Accept"
+            >
+              <Phone className="w-8 h-8 text-white" />
+            </button>
+          </div>
+          
+          {/* Call Type Badge */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200/50 mt-6">
+            {callType === "video" ? (
+              <>
+                <Video className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Incoming Video Call</span>
+              </>
+            ) : (
+              <>
+                <Phone className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Incoming Audio Call</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -597,6 +633,7 @@ export default function Dashboard({ user }: DashboardProps) {
         roomName={callRoom}
         callType={callType}
         initialSettings={callSettings}
+        otherUserName={otherUserName || undefined}
         onLeave={() => {
           const callDuration = callStartTimeRef.current ? Math.round((Date.now() - callStartTimeRef.current) / 1000 / 60) : 0;
           setInCall(false);
@@ -847,11 +884,19 @@ export default function Dashboard({ user }: DashboardProps) {
                     const chat = chats.find(c => c.id === selectedChat);
                     if (!chat) return;
 
-                    // Extract recipient ID from chat
+                    // Extract recipient ID and name from chat
                     let recipientId: string | null = null;
+                    let recipientName: string | null = null;
                     if (chat.type === "direct" && chat.participants) {
-                      recipientId = chat.participants.find((p: any) => p.id !== user.id)?.id || null;
+                      const otherUser = chat.participants.find((p: any) => p.id !== user.id);
+                      recipientId = otherUser?.id || null;
+                      recipientName = otherUser?.name || chat.name || chat.other_user_name || "User";
+                    } else {
+                      recipientName = chat.name || "User";
                     }
+                    
+                    // Store the other user's name for the call screen
+                    setOtherUserName(recipientName);
 
                     // Send call notification to recipient
                     if (recipientId) {

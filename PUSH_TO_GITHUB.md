@@ -1,78 +1,149 @@
-# Push Files to GitHub - Manual Instructions
+# Push to GitHub to Trigger Amplify Build
 
-## ✅ Files Ready Locally
+## Current Status
+✅ Changes committed locally  
+✅ Build tested and working  
+⚠️ Need to push to GitHub  
 
-I've successfully created the files in the correct location:
+## Quick Fix: Use Personal Access Token
 
-- ✅ `index.html` (14.39 KB) - Login page
-- ✅ `amplify.yml` - Amplify build configuration  
-- ✅ `app/index.html` - Dashboard page
+### Step 1: Create GitHub Token (2 minutes)
 
-## 🚀 Push to GitHub
+1. **Go to GitHub Settings:**
+   - https://github.com/settings/tokens
 
-The files are committed locally but need to be pushed to GitHub. Here are your options:
+2. **Generate New Token:**
+   - Click "Generate new token" → "Generate new token (classic)"
+   
+3. **Configure Token:**
+   - Note: `Summit Deployment`
+   - Expiration: `90 days` (or your preference)
+   - Select scopes: ✅ **repo** (check all repo boxes)
+   
+4. **Generate and Copy:**
+   - Click "Generate token"
+   - **COPY THE TOKEN NOW** (you won't see it again!)
+   - Example: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
-### Option 1: Manual Push via Command Line
+### Step 2: Push with Token
 
-```bash
-# Pull and merge remote changes first
-git pull origin main --allow-unrelated-histories
+```powershell
+# In PowerShell, run this command:
+cd C:\summit\summit
+git push https://YOUR_TOKEN_HERE@github.com/Icokruger999/summit.git main
+```
 
-# If merge conflicts occur, resolve them, then:
-git add .
-git commit -m "Resolve merge conflicts"
+**Replace `YOUR_TOKEN_HERE` with your actual token**
+
+Example:
+```powershell
+git push https://ghp_abc123xyz789@github.com/Icokruger999/summit.git main
+```
+
+### Step 3: Amplify Auto-Deploys
+
+Once pushed:
+- GitHub receives the commit
+- Amplify detects the change
+- Build starts automatically (~5-10 minutes)
+- Deployment completes
+
+## Alternative: Save Token for Future Use
+
+### Option A: Git Credential Manager (Recommended)
+```powershell
+# Windows will prompt for credentials and save them
 git push origin main
-
-# OR if you want to overwrite remote (use carefully):
-git push origin main --force
+# Enter username: Icokruger999
+# Enter password: YOUR_TOKEN (paste the token)
 ```
 
-### Option 2: Use GitHub Desktop
-
-1. Open GitHub Desktop
-2. Select the `summit` repository
-3. You should see the commit: "Add Amplify frontend files to root directory"
-4. Click "Push origin" button
-5. Resolve any merge conflicts if prompted
-
-### Option 3: Push via GitHub Web Interface
-
-1. Go to: https://github.com/Icokruger999/summit
-2. Upload files manually:
-   - Click "Add file" → "Upload files"
-   - Drag and drop: `index.html`, `amplify.yml`, and `app/` folder
-   - Commit directly to `main` branch
-
-## 📁 File Structure in Repo
-
-After pushing, your GitHub repo should have:
-
-```
-summit/
-├── index.html          ← Login page (ROOT)
-├── amplify.yml         ← Build config (ROOT)
-└── app/
-    └── index.html      ← Dashboard
+### Option B: Update Remote URL
+```powershell
+# Save token in remote URL (less secure but convenient)
+git remote set-url origin https://YOUR_TOKEN@github.com/Icokruger999/summit.git
+git push origin main
 ```
 
-## ✅ After Pushing
+### Option C: Use SSH (Most Secure)
+```powershell
+# If you have SSH key set up
+git remote set-url origin git@github.com:Icokruger999/summit.git
+git push origin main
+```
 
-1. **Amplify will auto-detect changes** and start a build
-2. **Wait 1-2 minutes** for build to start
-3. **Check build status:**
-   - https://console.aws.amazon.com/amplify/home?region=eu-west-1#/d1mhd5fnnjyucj/builds
-4. **Once build succeeds:**
-   - https://d1mhd5fnnjyucj.amplifyapp.com should work!
+## What Happens After Push
 
-## 🔍 Verify Files in GitHub
+1. **GitHub receives commit** (instant)
+2. **Amplify webhook triggered** (instant)
+3. **Build starts** (~5-10 minutes)
+   - Installs dependencies
+   - Runs `npm run build`
+   - Sets `VITE_SERVER_URL=https://api.codingeverest.com`
+4. **Deployment** (~1-2 minutes)
+5. **CDN update** (~1-2 minutes)
 
-After pushing, verify files are in repo root:
-- https://github.com/Icokruger999/summit/blob/main/index.html
-- https://github.com/Icokruger999/summit/blob/main/amplify.yml
+**Total time: ~10 minutes**
 
-Both should exist (not 404).
+## Monitor Deployment
+
+### Amplify Console:
+- https://console.aws.amazon.com/amplify
+- Select your Summit app
+- Watch build progress in real-time
+
+### Check Status:
+```powershell
+# After deployment, test:
+curl https://summit.codingeverest.com
+curl https://summit.api.codingeverest.com/health
+```
+
+## What's Being Deployed
+
+### Changes in this commit:
+- ✅ Chime SDK package added
+- ✅ Full audio/video implementation
+- ✅ Updated useChime hook
+- ✅ Updated CallRoom component
+- ✅ Fixed production API URL
+
+### Backend (already deployed):
+- ✅ Chime endpoints working
+- ✅ Syntax errors fixed
+- ✅ Server stable
+
+## Troubleshooting
+
+### Token doesn't work:
+- Make sure you selected "repo" scope
+- Token must not be expired
+- Copy the entire token (starts with `ghp_`)
+
+### Still getting authentication error:
+```powershell
+# Clear cached credentials
+git credential-cache exit
+
+# Or use token directly in URL
+git push https://YOUR_TOKEN@github.com/Icokruger999/summit.git main
+```
+
+### Need to see what's committed:
+```powershell
+git log -1
+git show HEAD
+```
+
+## Quick Command
+
+**Just replace YOUR_TOKEN and run:**
+
+```powershell
+cd C:\summit\summit
+git push https://YOUR_TOKEN@github.com/Icokruger999/summit.git main
+```
 
 ---
 
-**Files are ready! Just need to push to GitHub.** ✅
-
+**Once pushed, Amplify will automatically build and deploy in ~10 minutes!**

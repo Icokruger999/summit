@@ -8,9 +8,10 @@ interface CallRoomProps {
   callType?: "audio" | "video";
   initialSettings?: { audioEnabled: boolean; videoEnabled: boolean } | null;
   onConnected?: () => void;
+  otherUserName?: string; // Name of the person being called
 }
 
-export default function CallRoom({ roomName, callType = "video", initialSettings, onLeave, onConnected }: CallRoomProps) {
+export default function CallRoom({ roomName, callType = "video", initialSettings, onLeave, onConnected, otherUserName }: CallRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const { 
     connect, 
@@ -93,9 +94,11 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
       <div className="px-6 py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-white font-semibold text-lg">{roomName}</h2>
+            <h2 className="text-white font-semibold text-lg">
+              {otherUserName || "Call"}
+            </h2>
             <p className="text-gray-300 text-sm">
-              Chime Meeting • {remoteVideoTiles.size} participant{remoteVideoTiles.size !== 1 ? 's' : ''}
+              {remoteVideoTiles.size > 0 ? "Connected" : "Calling..."} • {remoteVideoTiles.size} participant{remoteVideoTiles.size !== 1 ? 's' : ''}
             </p>
           </div>
         </div>

@@ -1,0 +1,13 @@
+{
+  "name": "Validate Server Config Before Deploy",
+  "version": "1.0.0",
+  "description": "Automatically validates production server configuration before any deployment to prevent downtime",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["server/src/**/*.ts", "server/src/**/*.js", "*.py"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A server file was modified. Before any deployment:\n1. Remind me that production files must NEVER be edited directly\n2. Validate that changes follow the rules in CRITICAL_SERVER_PROTECTION.md\n3. Ensure Chime region has quotes: region: 'us-east-1'\n4. Confirm server port is 4000\n5. Ask if I want to run validation: python summit/validate-config.py"
+  }
+}

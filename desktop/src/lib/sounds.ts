@@ -110,14 +110,20 @@ export const sounds = {
     }, 440);
   },
 
-  // Call ringing sound (repeating) - low and soft
+  // Call ringing sound (repeating) - Facebook Messenger style
   callRinging: () => {
     if (localStorage.getItem("soundsEnabled") === "false") return;
-    // Simple two-tone pattern: lower tones, soft volume
-    playTone(220, 0.25, 'sine', 0.12); // A3 (lowered from A4)
+    // Facebook Messenger-like ringtone: upward melody
+    playTone(523, 0.15, 'sine', 0.25); // C5
     setTimeout(() => {
-      playTone(277, 0.25, 'sine', 0.12); // C#4 (lowered from C#5)
-    }, 280);
+      playTone(659, 0.15, 'sine', 0.25); // E5
+    }, 150);
+    setTimeout(() => {
+      playTone(784, 0.15, 'sine', 0.25); // G5
+    }, 300);
+    setTimeout(() => {
+      playTone(1047, 0.25, 'sine', 0.25); // C6
+    }, 450);
   },
 };
 
@@ -130,7 +136,7 @@ export function startCallRinging() {
   sounds.callRinging(); // Play immediately
   ringingInterval = setInterval(() => {
     sounds.callRinging();
-  }, 2000); // Repeat every 2 seconds
+  }, 3000); // Repeat every 3 seconds (Facebook Messenger timing)
 }
 
 export function stopCallRinging() {
