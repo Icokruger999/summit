@@ -153,6 +153,18 @@ export function useMessageWebSocket({
             window.dispatchEvent(new CustomEvent('typingIndicator', {
               detail: data.data
             }));
+          } else if (data.type === "MESSAGE_EDITED") {
+            console.log("✏️ Received message edited notification:", data.data);
+            // Dispatch event for message edit
+            window.dispatchEvent(new CustomEvent('messageEdited', {
+              detail: data.data
+            }));
+          } else if (data.type === "MESSAGE_DELETED") {
+            console.log("🗑️ Received message deleted notification:", data.data);
+            // Dispatch event for message deletion
+            window.dispatchEvent(new CustomEvent('messageDeleted', {
+              detail: data.data
+            }));
           } else if (data.type === "CONNECTED") {
             console.log("✅ WebSocket authenticated for user:", data.userId);
           }
