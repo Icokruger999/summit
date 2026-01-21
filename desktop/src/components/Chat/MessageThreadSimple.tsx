@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2, UserPlus } from "lucide-react";
+import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2, UserPlus, Image as ImageIcon } from "lucide-react";
 import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
@@ -14,6 +14,10 @@ interface Message {
   type: "text" | "file";
   status?: "sending" | "sent" | "received" | "read" | "failed";
   editedAt?: string;
+  fileUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
 }
 
 interface MessageThreadSimpleProps {
@@ -65,6 +69,9 @@ export default function MessageThreadSimple({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const chatMenuRef = useRef<HTMLDivElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -1170,6 +1177,140 @@ export default function MessageThreadSimple({
     }
   };
 
+  // Handle paste event for images
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    // Check if any item is an image
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault(); // Prevent default paste behavior
+        
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        console.log('📎 Image pasted:', file.name, file.type, file.size);
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setImagePreview(event.target?.result as string);
+          setImageFile(file);
+        };
+        reader.readAsDataURL(file);
+        
+        break; // Only handle first image
+      }
+    }
+  };
+
+  // Handle image upload and send
+  const handleSendImage = async () => {
+    if (!imageFile || !dbChatId || uploadingImage) return;
+
+    setUploadingImage(true);
+
+    try {
+      // Upload image to S3
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://summit.api.codingeverest.com/api/uploads/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const result = await response.json();
+      console.log('✅ Image uploaded:', result);
+
+      // Send message with image
+      const messageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      const message: Message = {
+        id: messageId,
+        senderId: userId,
+        senderName: "You",
+        content: result.file.originalName || 'Image',
+        timestamp: new Date(),
+        type: "file",
+        status: "sending",
+        fileUrl: result.file.url,
+        fileName: result.file.filename,
+        mimeType: result.file.mimeType,
+        fileSize: result.file.size,
+      };
+
+      // Add message optimistically
+      setMessages((prev) => {
+        const updated = [...prev, message];
+        messageCache.addMessage(chatId, message, dbChatId || undefined);
+        return updated;
+      });
+
+      // Clear preview
+      setImagePreview(null);
+      setImageFile(null);
+
+      // Save to database
+      await messagesApi.saveMessage({
+        id: messageId,
+        chatId: dbChatId,
+        content: result.file.originalName || 'Image',
+        type: "file",
+        fileName: result.file.filename,
+        fileUrl: result.file.url,
+        fileSize: result.file.size,
+        mimeType: result.file.mimeType,
+      });
+
+      // Update status to "sent"
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m.id === messageId ? { ...m, status: "sent" as const } : m
+        );
+        messageCache.updateMessageStatus(chatId, messageId, "sent", dbChatId || undefined);
+        return updated;
+      });
+
+      // Update chat list
+      window.dispatchEvent(new CustomEvent('messageUpdate', {
+        detail: {
+          chatId: dbChatId,
+          lastMessage: '📎 Image',
+          timestamp: new Date(),
+          senderId: userId,
+        }
+      }));
+
+      console.log('✅ Image message sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending image:', error);
+      alert('Failed to send image. Please try again.');
+      
+      // Clear preview on error
+      setImagePreview(null);
+      setImageFile(null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Cancel image preview
+  const handleCancelImage = () => {
+    setImagePreview(null);
+    setImageFile(null);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Chat Header */}
@@ -1395,9 +1536,22 @@ export default function MessageThreadSimple({
                             </div>
                           ) : (
                             <>
-                              <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                                {message.content}
-                              </p>
+                              {/* Display image if message has fileUrl */}
+                              {message.fileUrl && message.type === "file" && message.mimeType?.startsWith('image/') ? (
+                                <div className="flex flex-col gap-2">
+                                  <img 
+                                    src={message.fileUrl} 
+                                    alt={message.fileName || 'Image'} 
+                                    className="max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(message.fileUrl, '_blank')}
+                                  />
+                                  <p className="text-xs text-gray-500">{message.fileName}</p>
+                                </div>
+                              ) : (
+                                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                  {message.content}
+                                </p>
+                              )}
                               {message.editedAt && (
                                 <span className="text-xs text-gray-500 italic mt-1 block">
                                   (edited)
@@ -1489,14 +1643,62 @@ export default function MessageThreadSimple({
 
       {/* Input */}
       <div className="p-4 border-t border-gray-200 bg-white">
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-start gap-3">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="w-32 h-32 object-cover rounded-lg"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  {imageFile?.name}
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  {imageFile && (imageFile.size / 1024).toFixed(1)} KB
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSendImage}
+                    disabled={uploadingImage}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm flex items-center gap-2"
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <Clock className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send Image
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleCancelImage}
+                    disabled={uploadingImage}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-end gap-3">
           <div className="flex-1 relative">
             <textarea
               value={newMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              disabled={sending || !dbChatId}
+              onPaste={handlePaste}
+              placeholder="Type a message or paste an image..."
+              disabled={sending || !dbChatId || uploadingImage}
               className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all max-h-32"
               rows={1}
             />
@@ -1512,7 +1714,7 @@ export default function MessageThreadSimple({
                 });
               }
             }}
-            disabled={!newMessage.trim() || sending || !dbChatId}
+            disabled={!newMessage.trim() || sending || !dbChatId || uploadingImage}
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-sky-600 text-white rounded-2xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Send className="w-5 h-5" />

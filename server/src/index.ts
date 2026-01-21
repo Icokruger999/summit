@@ -15,8 +15,14 @@ import chatsRoutes from "./routes/chats.js";
 import summitRoutes from "./routes/summit.js";
 import subscriptionsRoutes from "./routes/subscriptions.js";
 import chimeRoutes from "./routes/chime.js";
+import uploadsRoutes from "./routes/uploads.js";
 import { messageNotifier } from "./lib/messageNotifier.js";
 import jwt from "jsonwebtoken";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -156,6 +162,7 @@ app.use(express.json());
 // import { checkSubscriptionAccess } from "./middleware/subscription.js";
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
+
 // All routes - subscription check disabled
 app.use("/api/meetings", meetingsRoutes);
 app.use("/api/users", usersRoutes);
@@ -167,6 +174,7 @@ app.use("/api/chat-requests", chatRequestsRoutes);
 app.use("/api/chats", chatsRoutes);
 app.use("/api/summit", summitRoutes);
 app.use("/api/chime", chimeRoutes);
+app.use("/api/uploads", uploadsRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
