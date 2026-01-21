@@ -46,9 +46,6 @@ export default function MeetingCalendar({
     };
   }, [userId]);
 
-  const loadMeetings = async (showLoading = true) => {
-    try {
-
   const handleCancelMeeting = async (meetingId: string, meetingTitle: string) => {
     // Confirm before canceling
     if (!confirm(`Are you sure you want to cancel "${meetingTitle}"? All participants will be notified.`)) {
