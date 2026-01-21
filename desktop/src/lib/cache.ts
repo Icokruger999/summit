@@ -8,6 +8,7 @@ const CACHE_PREFIX = "chat_cache_v" + CACHE_VERSION;
 const CHATS_CACHE_KEY = `${CACHE_PREFIX}_chats`;
 const MESSAGES_CACHE_PREFIX = `${CACHE_PREFIX}_messages_`;
 const CONTACTS_CACHE_KEY = `${CACHE_PREFIX}_contacts`;
+const USERS_CACHE_KEY = `${CACHE_PREFIX}_users`;
 const CACHE_TIMESTAMP_PREFIX = `${CACHE_PREFIX}_timestamp_`;
 const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -309,6 +310,33 @@ export function clearAllCache(): void {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
   console.log("🧹 Cleared all cache");
 }
+
+// User cache operations - cache user names to avoid "Unknown" display
+export const userCache = {
+  // Get cached user info
+  get(userId: string): { id: string; name: string; email?: string } | null {
+    const key = `${USERS_CACHE_KEY}_${userId}`;
+    return getCachedData<{ id: string; name: string; email?: string }>(key);
+  },
+
+  // Set cached user info
+  set(userId: string, userInfo: { id: string; name: string; email?: string }): void {
+    const key = `${USERS_CACHE_KEY}_${userId}`;
+    setCachedData(key, userInfo);
+  },
+
+  // Get user name (returns cached name or null)
+  getName(userId: string): string | null {
+    const user = userCache.get(userId);
+    return user?.name || null;
+  },
+
+  // Clear user cache
+  clear(userId: string): void {
+    const key = `${USERS_CACHE_KEY}_${userId}`;
+    localStorage.removeItem(key);
+  },
+};
 
 // Initialize: clear expired cache on load
 if (typeof window !== "undefined") {

@@ -3,7 +3,7 @@ import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, 
 import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
-import { messageCache } from "../../lib/cache";
+import { messageCache, userCache } from "../../lib/cache";
 
 interface Message {
   id: string;
@@ -128,17 +128,31 @@ export default function MessageThreadSimple({
         fullNotification: notification
       });
       
-      // Try to get sender name from notification, or fetch from API if needed
+      // Try to get sender name from notification first, then from cache
       let senderName = notification.senderName || notification.sender_name;
       
-      // If no sender name in notification, try to fetch it
+      // If no sender name in notification, try to get from cache
       if (!senderName && notification.senderId) {
-        console.log("⚠️ No sender name in notification, will show as Unknown temporarily");
-        // We'll reload messages to get the correct name
-        setTimeout(() => {
-          console.log("🔄 Reloading messages to get correct sender names");
-          loadMessages();
-        }, 500);
+        const cachedName = userCache.getName(notification.senderId);
+        if (cachedName) {
+          console.log(`✅ Using cached name for user ${notification.senderId}: ${cachedName}`);
+          senderName = cachedName;
+        } else {
+          console.log("⚠️ No sender name in notification or cache, will show as Unknown temporarily");
+          // We'll reload messages to get the correct name
+          setTimeout(() => {
+            console.log("🔄 Reloading messages to get correct sender names");
+            loadMessages();
+          }, 500);
+        }
+      }
+      
+      // Cache the sender name if we have it
+      if (senderName && senderName !== "Unknown" && notification.senderId) {
+        userCache.set(notification.senderId, {
+          id: notification.senderId,
+          name: senderName,
+        });
       }
       
       const newMessage: Message = {
@@ -535,10 +549,22 @@ export default function MessageThreadSimple({
                     return isValid;
                   })
                   .map((msg: any) => {
+                    const senderId = msg.sender_id || msg.senderId;
+                    const senderName = msg.sender_name || msg.senderName || msg.sender_email || "Unknown";
+                    
+                    // Cache user name for future use
+                    if (senderId && senderName && senderName !== "Unknown") {
+                      userCache.set(senderId, {
+                        id: senderId,
+                        name: senderName,
+                        email: msg.sender_email,
+                      });
+                    }
+                    
                     const formatted = {
                       id: msg.id,
-                      senderId: msg.sender_id || msg.senderId,
-                      senderName: msg.sender_name || msg.senderName || msg.sender_email || "Unknown",
+                      senderId,
+                      senderName,
                       content: msg.content || "",
                       timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
                       type: (msg.type || "text") as "text" | "file",
