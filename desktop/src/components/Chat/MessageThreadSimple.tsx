@@ -26,6 +26,7 @@ interface MessageThreadSimpleProps {
     dbId?: string; // Database UUID (for API calls)
     other_user_id?: string;
     other_user_name?: string;
+    created_by?: string; // Creator user ID for group chats
   };
   onStartCall: (roomName: string, callType?: "audio" | "video") => void;
   onMessageSent?: (chatId: string, message: string, timestamp: Date) => void;
@@ -139,12 +140,7 @@ export default function MessageThreadSimple({
           console.log(`✅ Using cached name for user ${notification.senderId}: ${cachedName}`);
           senderName = cachedName;
         } else {
-          console.log("⚠️ No sender name in notification or cache, will show as Unknown temporarily");
-          // We'll reload messages to get the correct name
-          setTimeout(() => {
-            console.log("🔄 Reloading messages to get correct sender names");
-            loadMessages();
-          }, 500);
+          console.log("⚠️ No sender name in notification or cache, will show as Unknown");
         }
       }
       
