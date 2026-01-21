@@ -440,6 +440,16 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                   You are presenting
                 </span>
               </div>
+              {/* Stop Sharing Button - Teams-like */}
+              <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                <button
+                  onClick={toggleScreenShare}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg flex items-center gap-2 transition-all"
+                >
+                  <MonitorOff className="w-5 h-5" />
+                  Stop Sharing
+                </button>
+              </div>
             </div>
           ) : remoteAttendees.size > 0 && Array.from(remoteAttendees.values())[0].hasVideo ? (
             /* Remote participant's video takes main view */
