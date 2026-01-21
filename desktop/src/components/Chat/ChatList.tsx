@@ -141,14 +141,27 @@ export default function ChatList({
         const updated = prevChats.map((chat) => {
           // Match by frontend chatId format or database ID
           const matches = chat.id === chatId || chat.dbId === chatId;
-          return matches
-            ? {
-                ...chat,
-                last_message: lastMessage,
-                last_message_at: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
-                last_message_sender_id: senderId || chat.last_message_sender_id, // Update sender ID if provided
-              }
-            : chat;
+          if (matches) {
+            // If this chat is NOT currently selected AND the message is from someone else, increment unread count
+            const isCurrentlySelected = selectedChat === chat.id || selectedChat === chat.dbId;
+            const isFromOtherUser = senderId && senderId !== userId;
+            
+            let newUnreadCount = chat.unreadCount || 0;
+            if (!isCurrentlySelected && isFromOtherUser) {
+              newUnreadCount = newUnreadCount + 1;
+              console.log(`📬 Incrementing unread count for chat ${chat.id}: ${newUnreadCount}`);
+            }
+            
+            return {
+              ...chat,
+              last_message: lastMessage,
+              last_message_at: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
+              last_message_sender_id: senderId || chat.last_message_sender_id,
+              unreadCount: newUnreadCount,
+              hasUnread: newUnreadCount > 0,
+            };
+          }
+          return chat;
         });
         
         // Update cache with the updated chat
@@ -187,7 +200,7 @@ export default function ChatList({
       window.removeEventListener('chatCreated' as any, handleChatCreated as EventListener);
       window.removeEventListener('reloadChats' as any, handleReloadChats as EventListener);
     };
-  }, [loadChats, chats]); // Add chats to dependencies so we can check current state
+  }, [loadChats, chats, selectedChat, userId]); // Add selectedChat and userId to check if message is for current chat
 
   useEffect(() => {
     // Only load once on mount or when userId changes
