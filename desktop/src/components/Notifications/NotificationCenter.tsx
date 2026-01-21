@@ -8,15 +8,19 @@ import { sounds } from "../../lib/sounds";
 interface NotificationCenterProps {
   userId: string;
   onJoinMeeting?: (roomName: string) => void;
-  pendingChatRequests?: any[]; // Add chat requests prop
-  onNavigateToContacts?: () => void; // Callback to navigate to Contacts tab
+  pendingChatRequests?: any[];
+  persistentNotifications?: any[]; // Add persistent notifications prop
+  onNavigateToContacts?: () => void;
+  onDismissNotification?: (notificationId: string) => void; // Callback to dismiss notification
 }
 
 export default function NotificationCenter({
   userId,
   onJoinMeeting,
   pendingChatRequests = [],
+  persistentNotifications = [],
   onNavigateToContacts,
+  onDismissNotification,
 }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,7 +68,7 @@ export default function NotificationCenter({
     };
   }, [isOpen]);
 
-  const totalNotifications = upcomingMeetings.length + meetingInvitations.length + pendingChatRequests.length;
+  const totalNotifications = upcomingMeetings.length + meetingInvitations.length + pendingChatRequests.length + persistentNotifications.length;
   const hasNotifications = totalNotifications > 0;
 
   const formatDate = (date: Date) => {
@@ -151,6 +155,58 @@ export default function NotificationCenter({
                               View Request
                             </button>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Persistent Notifications (Group Invites, etc.) */}
+                {persistentNotifications.map((notif) => {
+                  const data = notif.data || {};
+                  return (
+                    <div
+                      key={`persistent-${notif.id}`}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <UserPlus className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-sm">
+                                {notif.type === 'GROUP_ADDED' ? 'Group Invitation' : 'Notification'}
+                              </h4>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {notif.message}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                onDismissNotification?.(notif.id);
+                              }}
+                              className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                            >
+                              <X className="w-3 h-3 text-gray-400" />
+                            </button>
+                          </div>
+                          {data.chatName && (
+                            <p className="text-xs text-gray-600 mb-2">
+                              Group: {data.chatName}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => {
+                              onDismissNotification?.(notif.id);
+                              setIsOpen(false);
+                            }}
+                            className="w-full px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                          >
+                            <Check className="w-4 h-4" />
+                            View Group
+                          </button>
                         </div>
                       </div>
                     </div>

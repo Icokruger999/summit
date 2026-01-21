@@ -47,6 +47,7 @@ export default function Dashboard({ user }: DashboardProps) {
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "info" | "warning" | "error" } | null>(null);
+  const [persistentNotifications, setPersistentNotifications] = useState<any[]>([]);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [otherUserName, setOtherUserName] = useState<string | null>(null); // Track who we're calling
   
@@ -285,28 +286,13 @@ export default function Dashboard({ user }: DashboardProps) {
         
         console.log(`📬 Fetched ${notifications.length} unread notifications`);
         
-        // Show each notification
-        for (const notif of notifications) {
-          if (notif.type === 'GROUP_ADDED') {
-            const data = notif.data || {};
-            setNotification({
-              message: notif.message,
-              type: "info",
-            });
-            
-            // Mark as read
-            await notificationsApi.markAsRead(notif.id);
-            
-            // Small delay between notifications
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
+        // Store notifications in state for the notification bell
+        setPersistentNotifications(notifications);
         
-        // Reload chats if there were any group notifications
+        // Reload chats if there were any group notifications (to show new groups)
         if (notifications.some(n => n.type === 'GROUP_ADDED')) {
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+          // Trigger chat list reload
+          window.dispatchEvent(new CustomEvent('reloadChats'));
         }
       } catch (error) {
         console.error("Error fetching persistent notifications:", error);
@@ -946,6 +932,7 @@ export default function Dashboard({ user }: DashboardProps) {
             <NotificationCenter
               userId={user.id}
               pendingChatRequests={pendingChatRequests}
+              persistentNotifications={persistentNotifications}
               onNavigateToContacts={() => {
                 setActiveView("contacts");
               }}
@@ -953,6 +940,17 @@ export default function Dashboard({ user }: DashboardProps) {
                 setPendingCallRoom(roomName);
                 setPendingCallType("video");
                 setShowPreCallSettings(true);
+              }}
+              onDismissNotification={async (notificationId) => {
+                try {
+                  const { notificationsApi } = await import("../lib/api");
+                  await notificationsApi.markAsRead(notificationId);
+                  setPersistentNotifications(prev => prev.filter(n => n.id !== notificationId));
+                  // Reload chats to show new groups
+                  window.dispatchEvent(new CustomEvent('reloadChats'));
+                } catch (error) {
+                  console.error("Error marking notification as read:", error);
+                }
               }}
             />
             <nav className="flex space-x-1 ml-4">
