@@ -92,6 +92,81 @@ router.get("/", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Get a specific chat with participants (for group calls)
+router.get("/:chatId", authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { chatId } = req.params;
+    console.log(`📥 GET /api/chats/${chatId} - User: ${userId}`);
+
+    // Verify user is a participant
+    const participantCheck = await query(`
+      SELECT 1 FROM chat_participants
+      WHERE chat_id = $1 AND user_id = $2
+    `, [chatId, userId]);
+
+    if (participantCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Not a participant in this chat" });
+    }
+
+    // Get chat details
+    const chatResult = await query(`
+      SELECT 
+        c.id,
+        c.name,
+        c.type,
+        c.created_by,
+        c.created_at,
+        c.updated_at,
+        c.last_message,
+        c.last_message_at
+      FROM chats c
+      WHERE c.id = $1
+    `, [chatId]);
+
+    if (chatResult.rows.length === 0) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    const chat = chatResult.rows[0];
+
+    // Get all participants
+    const participantsResult = await query(`
+      SELECT 
+        cp.user_id,
+        u.name,
+        u.email,
+        u.avatar_url
+      FROM chat_participants cp
+      JOIN users u ON cp.user_id = u.id
+      WHERE cp.chat_id = $1
+    `, [chatId]);
+
+    const response = {
+      id: chat.id,
+      name: chat.name,
+      type: chat.type,
+      created_by: chat.created_by,
+      created_at: chat.created_at,
+      updated_at: chat.updated_at,
+      last_message: chat.last_message,
+      last_message_at: chat.last_message_at,
+      participants: participantsResult.rows.map(p => ({
+        user_id: p.user_id,
+        name: p.name,
+        email: p.email,
+        avatar_url: p.avatar_url,
+      })),
+    };
+
+    console.log(`✅ Sending chat ${chatId} with ${response.participants.length} participants`);
+    res.json(response);
+  } catch (error: any) {
+    console.error("❌ Error fetching chat:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get or create a direct chat between current user and another user
 router.post("/direct", authenticate, async (req: AuthRequest, res) => {
   try {

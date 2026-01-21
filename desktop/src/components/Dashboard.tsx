@@ -1039,30 +1039,65 @@ export default function Dashboard({ user }: DashboardProps) {
                   userId={user.id}
                   chat={chats.find(c => c.id === selectedChat)}
                   onStartCall={async (roomName, type = "video") => {
-                    // Get the other user's ID from the chat
+                    // Get the chat
                     const chat = chats.find(c => c.id === selectedChat);
                     if (!chat) return;
 
-                    // Extract recipient ID and name from chat
-                    let recipientId: string | null = null;
+                    // Extract recipient info based on chat type
+                    let recipientIds: string[] = [];
                     let recipientName: string | null = null;
                     
                     if (chat.type === "direct") {
-                      // Try multiple ways to get the other user's ID
-                      recipientId = chat.other_user_id || 
-                                   (chat.userIds && chat.userIds[0]) || 
-                                   null;
+                      // Direct call - single recipient
+                      const recipientId = chat.other_user_id || 
+                                         (chat.userIds && chat.userIds[0]) || 
+                                         null;
+                      if (recipientId) {
+                        recipientIds = [recipientId];
+                      }
                       recipientName = chat.other_user_name || chat.name || "User";
-                    } else {
-                      recipientName = chat.name || "User";
+                    } else if (chat.type === "group") {
+                      // Group call - get all members from backend
+                      try {
+                        const token = localStorage.getItem("auth_token");
+                        const dbChatId = chat.dbId || chat.id;
+                        const response = await fetch(`${import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com"}/api/chats/${dbChatId}`, {
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                          },
+                        });
+                        
+                        if (response.ok) {
+                          const chatData = await response.json();
+                          // Get all participant IDs except current user
+                          if (chatData.participants && Array.isArray(chatData.participants)) {
+                            recipientIds = chatData.participants
+                              .map((p: any) => p.user_id || p.id)
+                              .filter((id: string) => id !== user.id);
+                          }
+                          console.log(`📞 Group call: Found ${recipientIds.length} members to notify`);
+                        }
+                      } catch (error) {
+                        console.error("❌ Error fetching group members:", error);
+                      }
+                      recipientName = chat.name || "Group";
                     }
                     
-                    // Store the other user's name for the call screen
+                    // Store the recipient name for the call screen
                     setOtherUserName(recipientName);
 
-                    // Send call notification to recipient (MUST succeed before joining)
-                    let notificationSent = false;
-                    if (recipientId) {
+                    // Send call notifications to all recipients (MUST succeed before joining)
+                    if (recipientIds.length === 0) {
+                      console.error("⚠️ No recipients found for call");
+                      alert("Could not identify recipients. Call cancelled.");
+                      return;
+                    }
+
+                    let notificationsSent = 0;
+                    let notificationsFailed = 0;
+                    
+                    // Send notifications to all recipients in parallel
+                    const notificationPromises = recipientIds.map(async (recipientId) => {
                       try {
                         const token = localStorage.getItem("auth_token");
                         const response = await fetch(`${import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com"}/api/chime/notify`, {
@@ -1079,33 +1114,51 @@ export default function Dashboard({ user }: DashboardProps) {
                         });
                         
                         if (response.ok) {
-                          console.log("✅ Call notification sent successfully to:", recipientId);
-                          notificationSent = true;
+                          console.log(`✅ Call notification sent to: ${recipientId}`);
+                          return true;
                         } else {
                           const errorText = await response.text();
-                          console.error("❌ Failed to send call notification:", response.status, errorText);
-                          alert(`Failed to notify ${recipientName}. Call cancelled.\n\nError: ${response.status} - ${errorText}`);
-                          return; // Don't join the call if notification failed
+                          console.error(`❌ Failed to notify ${recipientId}:`, response.status, errorText);
+                          return false;
                         }
                       } catch (error) {
-                        console.error("❌ Network error sending call notification:", error);
-                        alert(`Network error: Could not notify ${recipientName}. Call cancelled.\n\nPlease check your internet connection.`);
-                        return; // Don't join the call if notification failed
+                        console.error(`❌ Network error notifying ${recipientId}:`, error);
+                        return false;
                       }
-                    } else {
-                      console.error("⚠️ Could not find recipient ID for call notification");
-                      alert("Could not identify the recipient. Call cancelled.");
-                      return; // Don't join the call if we can't notify
+                    });
+
+                    const results = await Promise.all(notificationPromises);
+                    notificationsSent = results.filter(r => r).length;
+                    notificationsFailed = results.filter(r => !r).length;
+
+                    console.log(`📊 Call notifications: ${notificationsSent} sent, ${notificationsFailed} failed`);
+
+                    // For group calls, proceed even if some notifications fail
+                    // For direct calls, require notification to succeed
+                    if (chat.type === "direct" && notificationsSent === 0) {
+                      alert(`Failed to notify ${recipientName}. Call cancelled.`);
+                      return;
                     }
 
-                    // Only join the call if notification was sent successfully
-                    if (notificationSent) {
-                      console.log("✅ Notification sent, joining call...");
-                      setCallRoom(roomName);
-                      setCallType(type);
-                      setInCall(true);
-                      updateStatus("busy");
-                      localStorage.setItem("status_manually_set", "false");
+                    if (chat.type === "group" && notificationsSent === 0) {
+                      alert(`Failed to notify any group members. Call cancelled.`);
+                      return;
+                    }
+
+                    // Join the call
+                    console.log(`✅ ${notificationsSent} notification(s) sent, joining call...`);
+                    setCallRoom(roomName);
+                    setCallType(type);
+                    setInCall(true);
+                    updateStatus("busy");
+                    localStorage.setItem("status_manually_set", "false");
+                    
+                    // Show success message for group calls
+                    if (chat.type === "group") {
+                      const message = notificationsFailed > 0
+                        ? `Calling ${notificationsSent} member(s). ${notificationsFailed} member(s) could not be reached.`
+                        : `Calling all ${notificationsSent} member(s)...`;
+                      setNotification({ message, type: "info" });
                     }
                   }}
                   onMessageSent={(chatId, message, timestamp) => {
