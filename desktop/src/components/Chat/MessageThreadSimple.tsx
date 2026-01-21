@@ -198,35 +198,63 @@ export default function MessageThreadSimple({
 
   // Handle message edited notifications
   const handleMessageEdited = useCallback((event: CustomEvent<{ messageId: string, chatId: string, content: string, editedAt: string }>) => {
-    if (event.detail.chatId === dbChatId && dbChatId) {
-      console.log("✏️ Message edited notification received:", event.detail);
+    try {
+      if (!event?.detail) {
+        console.warn("⚠️ Message edited event has no detail");
+        return;
+      }
       
-      // Update message in state
-      setMessages((prev) => {
-        const updated = prev.map((msg) =>
-          msg.id === event.detail.messageId
-            ? { ...msg, content: event.detail.content, editedAt: event.detail.editedAt }
-            : msg
-        );
-        // Update cache
-        messageCache.set(chatId, updated, dbChatId);
-        return updated;
-      });
+      if (event.detail.chatId === dbChatId && dbChatId) {
+        console.log("✏️ Message edited notification received:", event.detail);
+        
+        // Update message in state
+        setMessages((prev) => {
+          try {
+            const updated = prev.map((msg) =>
+              msg.id === event.detail.messageId
+                ? { ...msg, content: event.detail.content, editedAt: event.detail.editedAt }
+                : msg
+            );
+            // Update cache
+            messageCache.set(chatId, updated, dbChatId);
+            return updated;
+          } catch (error) {
+            console.error("❌ Error updating message in state:", error);
+            return prev; // Return unchanged state on error
+          }
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error handling message edited notification:", error);
     }
   }, [dbChatId, chatId]);
 
   // Handle message deleted notifications
   const handleMessageDeleted = useCallback((event: CustomEvent<{ messageId: string, chatId: string }>) => {
-    if (event.detail.chatId === dbChatId && dbChatId) {
-      console.log("🗑️ Message deleted notification received:", event.detail);
+    try {
+      if (!event?.detail) {
+        console.warn("⚠️ Message deleted event has no detail");
+        return;
+      }
       
-      // Remove message from state
-      setMessages((prev) => {
-        const updated = prev.filter((msg) => msg.id !== event.detail.messageId);
-        // Update cache
-        messageCache.set(chatId, updated, dbChatId);
-        return updated;
-      });
+      if (event.detail.chatId === dbChatId && dbChatId) {
+        console.log("🗑️ Message deleted notification received:", event.detail);
+        
+        // Remove message from state
+        setMessages((prev) => {
+          try {
+            const updated = prev.filter((msg) => msg.id !== event.detail.messageId);
+            // Update cache
+            messageCache.set(chatId, updated, dbChatId);
+            return updated;
+          } catch (error) {
+            console.error("❌ Error removing message from state:", error);
+            return prev; // Return unchanged state on error
+          }
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error handling message deleted notification:", error);
     }
   }, [dbChatId, chatId]);
 
