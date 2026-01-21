@@ -999,8 +999,6 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
                     <div className="flex flex-wrap gap-3">
                       <a
                         href="/download"
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium text-sm shadow-sm hover:shadow-md"
                       >
                         <Download className="w-4 h-4" />
@@ -1008,8 +1006,6 @@ export default function Settings({ user, onSignOut }: SettingsProps) {
                       </a>
                       <a
                         href="/download"
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-medium text-sm"
                       >
                         Other Platforms

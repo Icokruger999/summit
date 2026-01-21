@@ -8,6 +8,7 @@ import AssetDownloader from "./components/Installer/AssetDownloader";
 import PermissionsRequest from "./components/PermissionsRequest";
 import FirstLoginPopup from "./components/FirstLoginPopup";
 import PasswordChange from "./components/PasswordChange";
+import DownloadPage from "./pages/Download";
 import { authApi, getAuthToken } from "./lib/api";
 import { requestNotificationPermission } from "./lib/notifications";
 
@@ -237,6 +238,10 @@ function App() {
         <Route
           path="/profile/:userId?"
           element={user ? <ProfileWrapper user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/download"
+          element={<DownloadPage />}
         />
       </Routes>
     </BrowserRouter>
