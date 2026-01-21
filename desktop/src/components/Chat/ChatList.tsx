@@ -222,21 +222,14 @@ export default function ChatList({
   // Clear unread count and scroll into view when selected chat changes
   useEffect(() => {
     if (selectedChat) {
-      const unreadKey = `unread_${selectedChat}_${userId}`;
-      const currentUnread = localStorage.getItem(unreadKey);
-      
-      // Only clear if there was an unread count
-      if (currentUnread && parseInt(currentUnread, 10) > 0) {
-        localStorage.setItem(unreadKey, "0");
-        // Update the chats state immediately to reflect the change
-        setChats((prevChats) =>
-          prevChats.map((chat) =>
-            chat.id === selectedChat
-              ? { ...chat, unreadCount: undefined }
-              : chat
-          )
-        );
-      }
+      // Clear unread count in state (no localStorage)
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === selectedChat || chat.dbId === selectedChat
+            ? { ...chat, unreadCount: 0, hasUnread: false }
+            : chat
+        )
+      );
       
       // Scroll the selected chat into view after a brief delay to ensure DOM is updated
       setTimeout(() => {
@@ -246,7 +239,7 @@ export default function ChatList({
         }
       }, 100);
     }
-  }, [selectedChat, userId]);
+  }, [selectedChat]);
 
   // Fetch presence for all contacts in direct chats
   useEffect(() => {
@@ -534,18 +527,7 @@ export default function ChatList({
                             }}
                             onClick={() => {
                               onSelectChat(chat.id);
-                              // Clear unread when selecting chat
-                              if (chat.hasUnread || chat.unreadCount) {
-                                setChats((prev) =>
-                                  prev.map((c) =>
-                                    c.id === chat.id
-                                      ? { ...c, hasUnread: false, unreadCount: 0 }
-                                      : c
-                                  )
-                                );
-                                const unreadKey = `unread_${chat.id}_${userId}`;
-                                localStorage.setItem(unreadKey, "0");
-                              }
+                              // Unread count will be cleared by the useEffect hook above
                             }}
                             className={`w-full px-4 py-4 text-left hover:bg-gray-50 transition-all ${
                               selectedChat === chat.id 
