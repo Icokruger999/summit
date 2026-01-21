@@ -416,7 +416,7 @@ export default function MessageThreadSimple({
   // Auto-scroll to bottom
   useEffect(() => {
     if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }
   }, [messages]);
 
