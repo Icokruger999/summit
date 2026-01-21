@@ -231,6 +231,11 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                   <p className="text-gray-500 text-xs mt-1">Ringing...</p>
                 </div>
               </div>
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
+                  {otherUserName || "Participant"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -397,15 +402,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="flex flex-wrap items-center justify-center gap-4 max-w-6xl">
           
-          {/* Local Video/Avatar (You) */}
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500/50 w-80 h-60">
-            {videoEnabled ? (
+          {/* Local Video/Avatar (You) - Larger when screen sharing */}
+          <div className={`relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500/50 ${
+            screenShareEnabled ? "w-full max-w-5xl h-[600px]" : "w-80 h-60"
+          }`}>
+            {videoEnabled || screenShareEnabled ? (
               <video
                 ref={localVideoElementRef}
                 autoPlay
                 muted
                 playsInline
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${screenShareEnabled ? "object-contain" : "object-cover"}`}
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
@@ -416,42 +423,53 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
             )}
             <div className="absolute bottom-3 left-3 flex items-center gap-2">
               <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
-                You {!audioEnabled && "🔇"}
+                You {!audioEnabled && "🔇"} {screenShareEnabled && "📺"}
               </span>
             </div>
           </div>
 
           {/* Remote Participants - Show avatar if no video, video if they have it */}
-          {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => (
-            <div key={attendeeId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60">
-              {attendee.hasVideo && attendee.tileId !== undefined ? (
-                <video
-                  ref={(el) => {
-                    if (el && attendee.tileId !== undefined) {
-                      remoteVideoRefs.current.set(attendee.tileId, el);
-                      bindVideoElement(attendee.tileId, el);
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">
-                      {otherUserName ? getInitials(otherUserName) : "?"}
-                    </span>
+          {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => {
+            // Check if this attendee is sharing screen (screen share tiles are usually larger content)
+            const isScreenShare = attendee.hasVideo && screenShareEnabled === false; // If someone else is sharing
+            const displayName = attendee.externalUserId || otherUserName || "Participant";
+            
+            return (
+              <div 
+                key={attendeeId} 
+                className={`relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 ${
+                  isScreenShare ? "w-full max-w-5xl h-[600px]" : "w-80 h-60"
+                }`}
+              >
+                {attendee.hasVideo && attendee.tileId !== undefined ? (
+                  <video
+                    ref={(el) => {
+                      if (el && attendee.tileId !== undefined) {
+                        remoteVideoRefs.current.set(attendee.tileId, el);
+                        bindVideoElement(attendee.tileId, el);
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    className={`w-full h-full ${isScreenShare ? "object-contain" : "object-cover"}`}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-3xl font-bold text-white">
+                        {getInitials(displayName)}
+                      </span>
+                    </div>
                   </div>
+                )}
+                <div className="absolute bottom-3 left-3">
+                  <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
+                    {displayName}
+                  </span>
                 </div>
-              )}
-              <div className="absolute bottom-3 left-3">
-                <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
-                  {otherUserName || "Participant"}
-                </span>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Show placeholder only if no one else has joined yet */}
           {remoteAttendees.size === 0 && (
@@ -465,6 +483,11 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                   </div>
                   <p className="text-gray-400 text-sm">Waiting for {otherUserName || "participant"}...</p>
                 </div>
+              </div>
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-black/60 px-3 py-1 rounded-full text-white text-sm font-medium">
+                  {otherUserName || "Participant"}
+                </span>
               </div>
             </div>
           )}
