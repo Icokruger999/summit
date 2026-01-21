@@ -152,10 +152,21 @@ export default function ChatList({
               console.log(`📬 Incrementing unread count for chat ${chat.id}: ${newUnreadCount}`);
             }
             
+            // Safely handle timestamp
+            let safeTimestamp: string;
+            try {
+              safeTimestamp = timestamp instanceof Date 
+                ? timestamp.toISOString() 
+                : new Date(timestamp).toISOString();
+            } catch (error) {
+              console.warn("Invalid timestamp in messageUpdate event, using current time");
+              safeTimestamp = new Date().toISOString();
+            }
+            
             return {
               ...chat,
               last_message: lastMessage,
-              last_message_at: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
+              last_message_at: safeTimestamp,
               last_message_sender_id: senderId || chat.last_message_sender_id,
               unreadCount: newUnreadCount > 0 ? newUnreadCount : undefined,
               hasUnread: newUnreadCount > 0,
