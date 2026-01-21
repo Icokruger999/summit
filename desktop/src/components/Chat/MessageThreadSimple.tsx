@@ -59,6 +59,9 @@ export default function MessageThreadSimple({
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const [editingChatName, setEditingChatName] = useState(false);
   const [newChatName, setNewChatName] = useState("");
+  const [showAddMembers, setShowAddMembers] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const chatMenuRef = useRef<HTMLDivElement>(null);
 
   // Close status dropdown when clicking outside
@@ -996,6 +999,41 @@ export default function MessageThreadSimple({
     }
   };
 
+  // Handle add members to group
+  const handleAddMembers = async () => {
+    if (selectedMembers.length === 0 || !dbChatId) return;
+
+    try {
+      await chatsApi.addGroupMembers(dbChatId, selectedMembers);
+      
+      setShowAddMembers(false);
+      setSelectedMembers([]);
+      
+      console.log(`✅ Added ${selectedMembers.length} members to group`);
+    } catch (error) {
+      console.error("Error adding members:", error);
+    }
+  };
+
+  // Fetch available users when Add Members modal opens
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!showAddMembers) return;
+      
+      try {
+        const { usersApi } = await import("../../lib/api");
+        const users = await usersApi.getAll();
+        // Filter out current user and users already in the chat
+        const filtered = users.filter((u: any) => u.id !== userId);
+        setAvailableUsers(filtered);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+    
+    fetchUsers();
+  }, [showAddMembers, userId]);
+
   // Handle delete/leave chat
   const handleDeleteChat = async () => {
     if (!dbChatId) return;
@@ -1081,6 +1119,16 @@ export default function MessageThreadSimple({
                     >
                       <Edit2 className="w-4 h-4" />
                       Rename Group
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddMembers(true);
+                        setChatMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Add Members
                     </button>
                     {/* Show Delete Group if user is creator, otherwise show Leave Group */}
                     {chat.created_by === userId ? (
@@ -1344,6 +1392,60 @@ export default function MessageThreadSimple({
           </button>
         </div>
       </div>
+
+      {/* Add Members Modal */}
+      {showAddMembers && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Add Members to Group</h3>
+            
+            <div className="max-h-96 overflow-y-auto mb-4">
+              {availableUsers.map((user) => (
+                <label
+                  key={user.id}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedMembers.includes(user.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedMembers([...selectedMembers, user.id]);
+                      } else {
+                        setSelectedMembers(selectedMembers.filter(id => id !== user.id));
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-sm text-gray-500">{user.email}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowAddMembers(false);
+                  setSelectedMembers([]);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddMembers}
+                disabled={selectedMembers.length === 0}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add {selectedMembers.length > 0 && `(${selectedMembers.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
