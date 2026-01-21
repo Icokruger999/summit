@@ -22,20 +22,12 @@ export default function DownloadPage() {
     }
   }, []);
 
-  const downloadLinks = {
-    windows: "https://summit-downloads.s3.amazonaws.com/Summit-Setup.exe",
-    mac: "https://summit-downloads.s3.amazonaws.com/Summit.dmg",
-    linux: "https://summit-downloads.s3.amazonaws.com/Summit.AppImage",
-  };
-
   const handleDownload = (os: OS) => {
     if (os === "unknown") return;
     
-    // Track download (optional analytics)
-    console.log(`Downloading Summit for ${os}`);
-    
-    // Trigger download
-    window.location.href = downloadLinks[os];
+    // Desktop installers are being prepared
+    // For now, users can continue using the web version
+    console.log(`Download requested for ${os} - installers coming soon`);
   };
 
   return (
@@ -72,9 +64,19 @@ export default function DownloadPage() {
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Download Summit Desktop
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
               Get the full Summit experience with native desktop notifications, better performance, and offline capabilities.
             </p>
+            
+            {/* Coming Soon Notice */}
+            <div className="max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                🚀 Desktop installers are being prepared
+              </p>
+              <p className="text-sm text-blue-700">
+                In the meantime, you can continue using Summit in your browser with all the same features including video calls, chat, and notifications.
+              </p>
+            </div>
           </div>
 
           {/* Download Cards */}
@@ -100,9 +102,10 @@ export default function DownloadPage() {
                 )}
                 <button
                   onClick={() => handleDownload("windows")}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium shadow-sm hover:shadow-md"
+                  disabled
+                  className="w-full px-4 py-3 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
                 >
-                  Download .exe
+                  Coming Soon
                 </button>
               </div>
             </div>
@@ -128,9 +131,10 @@ export default function DownloadPage() {
                 )}
                 <button
                   onClick={() => handleDownload("mac")}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium shadow-sm hover:shadow-md"
+                  disabled
+                  className="w-full px-4 py-3 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
                 >
-                  Download .dmg
+                  Coming Soon
                 </button>
               </div>
             </div>
@@ -156,9 +160,10 @@ export default function DownloadPage() {
                 )}
                 <button
                   onClick={() => handleDownload("linux")}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium shadow-sm hover:shadow-md"
+                  disabled
+                  className="w-full px-4 py-3 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
                 >
-                  Download .AppImage
+                  Coming Soon
                 </button>
               </div>
             </div>
