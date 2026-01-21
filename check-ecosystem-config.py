@@ -7,25 +7,31 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Checking Ecosystem Config")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Check for ecosystem.config.js ==="
+if [ -f /var/www/summit/ecosystem.config.js ]; then
+    echo "Found ecosystem.config.js:"
+    cat /var/www/summit/ecosystem.config.js
+else
+    echo "No ecosystem.config.js found"
+fi
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== Check for PM2 startup script ==="
+if [ -f /var/www/summit/start-pm2.sh ]; then
+    echo "Found start-pm2.sh:"
+    cat /var/www/summit/start-pm2.sh
+else
+    echo "No start-pm2.sh found"
+fi
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
-
-echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== List all files in /var/www/summit ==="
+ls -la /var/www/summit/ | grep -E "(config|start|pm2|env)"
 """
 
 try:

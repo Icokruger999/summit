@@ -7,25 +7,17 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
-
 command = """
-export HOME=/home/ubuntu
-
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "PM2 Status:"
+pm2 list
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "Port 4000:"
+lsof -i :4000 || echo "Nothing on port 4000"
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
-
-echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "Recent logs:"
+pm2 logs --lines 10 --nostream 2>/dev/null || echo "No logs"
 """
 
 try:
@@ -33,10 +25,10 @@ try:
         InstanceIds=[INSTANCE_ID],
         DocumentName="AWS-RunShellScript",
         Parameters={'commands': [command]},
-        TimeoutSeconds=30
+        TimeoutSeconds=60
     )
     
-    time.sleep(8)
+    time.sleep(5)
     
     output = ssm.get_command_invocation(
         CommandId=response['Command']['CommandId'],

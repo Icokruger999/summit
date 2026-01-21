@@ -7,25 +7,33 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Checking Services Status")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== PostgreSQL Status ==="
+sudo systemctl status postgresql | head -15
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== PgBouncer Status ==="
+sudo systemctl status pgbouncer | head -10
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
+echo "=== PM2 Status ==="
+pm2 status
 
 echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Test backend directly ==="
+curl -s http://localhost:4000/health || echo "Backend not responding"
+
+echo ""
+echo "=== Check password encryption ==="
+sudo -u postgres psql -t -c "SHOW password_encryption;"
+
+echo ""
+echo "=== Check summit_user password type ==="
+sudo -u postgres psql -t -c "SELECT rolname, LEFT(rolpassword, 10) FROM pg_authid WHERE rolname = 'summit_user';"
 """
 
 try:

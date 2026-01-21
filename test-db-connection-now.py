@@ -7,25 +7,25 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Testing Database Connection")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Test PgBouncer connection ==="
+PGPASSWORD='KUQoTLZJcHN0YYXS6qiGJS9B7' psql -h 127.0.0.1 -p 6432 -U summit_user -d summit -c "SELECT 1 as test;"
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== Test PostgreSQL direct connection ==="
+PGPASSWORD='KUQoTLZJcHN0YYXS6qiGJS9B7' psql -h 127.0.0.1 -p 5432 -U summit_user -d summit -c "SELECT 1 as test;"
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
+echo "=== Check PgBouncer logs ==="
+tail -20 /var/log/postgresql/pgbouncer.log
 
 echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Check PostgreSQL logs ==="
+tail -20 /var/log/postgresql/postgresql-14-main.log
 """
 
 try:
@@ -44,6 +44,9 @@ try:
     )
     
     print(output['StandardOutputContent'])
+    if output['StandardErrorContent']:
+        print("\n=== ERRORS ===")
+        print(output['StandardErrorContent'])
     
 except Exception as e:
     print(f"Error: {e}")

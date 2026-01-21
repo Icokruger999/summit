@@ -7,25 +7,26 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Check Auth Route Code")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Check auth route in production ==="
+cd /var/www/summit/dist/routes
+ls -la auth.js
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== Check login function (first 100 lines) ==="
+head -100 auth.js | grep -A 30 "login"
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
+echo "=== Check if bcrypt is being used ==="
+grep -n "bcrypt" auth.js | head -10
 
 echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Check actual PM2 error logs ==="
+pm2 logs summit-backend --err --lines 30 --nostream | tail -40
 """
 
 try:
@@ -36,7 +37,7 @@ try:
         TimeoutSeconds=30
     )
     
-    time.sleep(8)
+    time.sleep(6)
     
     output = ssm.get_command_invocation(
         CommandId=response['Command']['CommandId'],

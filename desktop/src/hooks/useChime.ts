@@ -17,7 +17,9 @@ interface RemoteAttendee {
   attendeeId: string;
   externalUserId: string;
   hasVideo: boolean;
+  hasAudio: boolean;
   tileId?: number;
+  isContentShare: boolean;
 }
 
 export function useChime(onConnected?: () => void) {
@@ -170,7 +172,7 @@ export function useChime(onConnected?: () => void) {
       // Set up audio/video observers
       const observer: AudioVideoObserver = {
         videoTileDidUpdate: (tileState: VideoTileState) => {
-          console.log("Video tile updated:", tileState.tileId, "Local:", tileState.localTile, "AttendeeId:", tileState.boundAttendeeId);
+          console.log("Video tile updated:", tileState.tileId, "Local:", tileState.localTile, "AttendeeId:", tileState.boundAttendeeId, "IsContent:", tileState.isContent);
           
           if (!tileState.boundVideoElement) {
             if (tileState.localTile && localVideoElementRef.current) {
@@ -187,18 +189,21 @@ export function useChime(onConnected?: () => void) {
                 return newMap;
               });
               
-              // Update attendee to show they have video
+              // Update attendee to show they have video (or content share)
               setRemoteAttendees((prev) => {
                 const newMap = new Map(prev);
                 const existing = newMap.get(tileState.boundAttendeeId!) || {
                   attendeeId: tileState.boundAttendeeId!,
                   externalUserId: "",
                   hasVideo: false,
+                  hasAudio: false,
+                  isContentShare: false,
                 };
                 newMap.set(tileState.boundAttendeeId!, {
                   ...existing,
                   hasVideo: true,
                   tileId: tileState.tileId,
+                  isContentShare: tileState.isContent || false,
                 });
                 return newMap;
               });
@@ -260,6 +265,8 @@ export function useChime(onConnected?: () => void) {
                 attendeeId,
                 externalUserId: externalUserId || "",
                 hasVideo: false,
+                hasAudio: false,
+                isContentShare: false,
               });
               console.log("✅ Remote attendee joined:", attendeeId, "Total remote:", newMap.size);
               return newMap;
@@ -293,6 +300,8 @@ export function useChime(onConnected?: () => void) {
                 attendeeId,
                 externalUserId: "",
                 hasVideo: false,
+                hasAudio: false,
+                isContentShare: false,
               });
               console.log("✅ Added attendee via volume indicator:", attendeeId);
               return newMap;

@@ -7,25 +7,21 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Finding PM2 Configuration")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Check PM2 dump file ==="
+cat /home/ubuntu/.pm2/dump.pm2
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== Check for ecosystem file ==="
+find /var/www/summit -name "ecosystem*.js" -o -name "pm2*.json" -o -name "pm2*.config.js"
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
-
-echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Check PM2 startup script ==="
+pm2 startup | grep "sudo"
 """
 
 try:
@@ -36,7 +32,7 @@ try:
         TimeoutSeconds=30
     )
     
-    time.sleep(8)
+    time.sleep(6)
     
     output = ssm.get_command_invocation(
         CommandId=response['Command']['CommandId'],

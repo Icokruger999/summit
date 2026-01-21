@@ -7,25 +7,24 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🔍 Getting Detailed Error")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Trigger a login attempt ==="
+curl -s -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ico@astutetech.co.za","password":"Stacey@1122"}' > /dev/null
+
+sleep 2
+
+echo "=== Get last 50 lines of error log ==="
+pm2 logs summit-backend --err --lines 50 --nostream | tail -50
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
-
-echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
-
-echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Get last 20 lines of output log ==="
+pm2 logs summit-backend --out --lines 20 --nostream | tail -20
 """
 
 try:

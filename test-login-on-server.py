@@ -7,25 +7,24 @@ REGION = "eu-west-1"
 
 ssm = boto3.client('ssm', region_name=REGION)
 
-print("🔍 Checking Actual Port")
+print("🧪 Test Login Directly on Server")
 
 command = """
 export HOME=/home/ubuntu
 
-echo "=== Check what ports are listening ==="
-netstat -tlnp | grep node
+echo "=== Current PM2 Status ==="
+pm2 status 2>&1 || echo "PM2 not running"
 
 echo ""
-echo "=== Check PM2 logs ==="
-pm2 logs summit-backend --lines 20 --nostream | tail -25
+echo "=== Test login endpoint on server ==="
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ico@astutetech.co.za","password":"Stacey@1122"}' \
+  -v 2>&1 | head -50
 
 echo ""
-echo "=== Test port 3000 ==="
-curl -s http://localhost:3000/health || echo "Port 3000 not responding"
-
-echo ""
-echo "=== Test port 4000 ==="
-curl -s http://localhost:4000/health || echo "Port 4000 not responding"
+echo "=== Check PM2 logs for auth errors ==="
+pm2 logs summit-backend --lines 20 --nostream 2>&1 | grep -A 5 -B 5 "auth\|login\|password\|error" || echo "No auth errors in logs"
 """
 
 try:
@@ -44,6 +43,9 @@ try:
     )
     
     print(output['StandardOutputContent'])
+    if output['StandardErrorContent']:
+        print("\n=== STDERR ===")
+        print(output['StandardErrorContent'])
     
 except Exception as e:
     print(f"Error: {e}")
