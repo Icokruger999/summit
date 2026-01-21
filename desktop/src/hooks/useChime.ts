@@ -26,6 +26,7 @@ export function useChime(onConnected?: () => void) {
   const [attendee, setAttendee] = useState<any>(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(false);
+  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
   const [remoteVideoTiles, setRemoteVideoTiles] = useState<Map<number, string>>(new Map());
   const [remoteAttendees, setRemoteAttendees] = useState<Map<string, RemoteAttendee>>(new Map());
   
@@ -33,6 +34,7 @@ export function useChime(onConnected?: () => void) {
   const deviceControllerRef = useRef<DefaultDeviceController | null>(null);
   const localVideoElementRef = useRef<HTMLVideoElement | null>(null);
   const isConnectingRef = useRef(false);
+  const screenShareStreamRef = useRef<MediaStream | null>(null);
 
   // Initialize device controller
   useEffect(() => {
@@ -422,6 +424,17 @@ export function useChime(onConnected?: () => void) {
         console.error("Error stopping audio input:", error);
       }
       
+      // Stop screen share if active
+      if (screenShareStreamRef.current) {
+        try {
+          screenShareStreamRef.current.getTracks().forEach(track => track.stop());
+          screenShareStreamRef.current = null;
+          console.log("Screen share stopped");
+        } catch (error) {
+          console.error("Error stopping screen share:", error);
+        }
+      }
+      
       // Stop video input to turn off camera
       try {
         await meetingSessionRef.current.audioVideo.stopVideoInput();
@@ -452,6 +465,7 @@ export function useChime(onConnected?: () => void) {
     setRemoteVideoTiles(new Map());
     setRemoteAttendees(new Map());
     setVideoEnabled(false);
+    setScreenShareEnabled(false);
     setAudioEnabled(true);
   }, [meeting]);
 
@@ -492,17 +506,134 @@ export function useChime(onConnected?: () => void) {
     }
   }, []);
 
+  const toggleScreenShare = useCallback(async () => {
+    if (!meetingSessionRef.current) {
+      console.error("No meeting session available");
+      return;
+    }
+
+    try {
+      if (screenShareEnabled) {
+        // Stop screen sharing
+        console.log("Stopping screen share...");
+        
+        // Stop the screen share stream
+        if (screenShareStreamRef.current) {
+          screenShareStreamRef.current.getTracks().forEach(track => {
+            track.stop();
+            console.log("Stopped screen share track:", track.kind);
+          });
+          screenShareStreamRef.current = null;
+        }
+        
+        // Stop the local video tile (which is showing screen share)
+        meetingSessionRef.current.audioVideo.stopLocalVideoTile();
+        
+        // If camera was on before screen share, restart it
+        if (videoEnabled) {
+          console.log("Restarting camera after screen share...");
+          const videoInputDevices = await meetingSessionRef.current.audioVideo.listVideoInputDevices();
+          if (videoInputDevices.length > 0) {
+            await meetingSessionRef.current.audioVideo.startVideoInput(videoInputDevices[0].deviceId);
+            meetingSessionRef.current.audioVideo.startLocalVideoTile();
+          }
+        }
+        
+        setScreenShareEnabled(false);
+        console.log("✅ Screen share stopped");
+        
+      } else {
+        // Start screen sharing
+        console.log("Starting screen share...");
+        
+        // Request screen share from browser
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: "always", // Show cursor in screen share
+            displaySurface: "monitor", // Prefer full screen
+          } as any,
+          audio: false, // Don't capture system audio (can cause echo)
+        });
+        
+        console.log("Screen share stream obtained:", screenStream.id);
+        screenShareStreamRef.current = screenStream;
+        
+        // Get the video track from the screen share
+        const screenTrack = screenStream.getVideoTracks()[0];
+        
+        // Listen for when user clicks "Stop Sharing" in browser UI
+        screenTrack.onended = () => {
+          console.log("Screen share ended by user (browser stop button)");
+          setScreenShareEnabled(false);
+          screenShareStreamRef.current = null;
+          
+          // Stop the local video tile
+          if (meetingSessionRef.current) {
+            meetingSessionRef.current.audioVideo.stopLocalVideoTile();
+            
+            // If camera was on, restart it
+            if (videoEnabled) {
+              console.log("Restarting camera after screen share ended...");
+              meetingSessionRef.current.audioVideo.listVideoInputDevices().then(devices => {
+                if (devices.length > 0 && meetingSessionRef.current) {
+                  meetingSessionRef.current.audioVideo.startVideoInput(devices[0].deviceId);
+                  meetingSessionRef.current.audioVideo.startLocalVideoTile();
+                }
+              });
+            }
+          }
+        };
+        
+        // Stop camera if it's on (can't have both camera and screen share)
+        if (videoEnabled) {
+          console.log("Stopping camera to start screen share...");
+          await meetingSessionRef.current.audioVideo.stopVideoInput();
+          meetingSessionRef.current.audioVideo.stopLocalVideoTile();
+        }
+        
+        // Start screen share video input
+        await meetingSessionRef.current.audioVideo.startVideoInput(screenStream);
+        meetingSessionRef.current.audioVideo.startLocalVideoTile();
+        
+        setScreenShareEnabled(true);
+        console.log("✅ Screen share started");
+      }
+    } catch (error: any) {
+      console.error("Error toggling screen share:", error);
+      
+      // Handle user cancellation gracefully
+      if (error.name === "NotAllowedError" || error.message?.includes("Permission denied")) {
+        console.log("Screen share permission denied or cancelled by user");
+      } else if (error.name === "NotFoundError") {
+        console.error("No screen share source available");
+        alert("No screen available to share. Please try again.");
+      } else {
+        console.error("Unexpected screen share error:", error);
+        alert(`Failed to ${screenShareEnabled ? 'stop' : 'start'} screen sharing: ${error.message}`);
+      }
+      
+      // Clean up on error
+      if (screenShareStreamRef.current) {
+        screenShareStreamRef.current.getTracks().forEach(track => track.stop());
+        screenShareStreamRef.current = null;
+      }
+      setScreenShareEnabled(false);
+    }
+  }, [screenShareEnabled, videoEnabled]);
+
   return {
     connect,
     disconnect,
     toggleAudio,
     toggleVideo,
+    toggleScreenShare,
     bindVideoElement,
     isConnected,
     meeting,
     attendee,
     audioEnabled,
     videoEnabled,
+    screenShareEnabled,
     remoteVideoTiles,
     remoteAttendees,
     localVideoElementRef,

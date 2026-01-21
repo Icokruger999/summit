@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useChime } from "../../hooks/useChime";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, X, Search } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, X, Search, Monitor, MonitorOff } from "lucide-react";
 import { chatRequestsApi, getAuthToken } from "../../lib/api";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com";
@@ -32,11 +32,13 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
     disconnect, 
     toggleAudio, 
     toggleVideo,
+    toggleScreenShare,
     bindVideoElement,
     isConnected, 
     meeting, 
     audioEnabled,
     videoEnabled,
+    screenShareEnabled,
     remoteVideoTiles,
     remoteAttendees,
     localVideoElementRef
@@ -258,6 +260,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
             >
               {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             </button>
+            <button
+              onClick={toggleScreenShare}
+              className={`p-4 rounded-full transition-all ${
+                screenShareEnabled
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+              title={screenShareEnabled ? "Stop Sharing Screen" : "Share Screen"}
+            >
+              {screenShareEnabled ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+            </button>
             <div className="w-px h-10 bg-white/20 mx-2"></div>
             <button
               onClick={handleLeave}
@@ -267,6 +280,12 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
               <PhoneOff className="w-5 h-5" />
             </button>
           </div>
+          {screenShareEnabled && (
+            <div className="text-blue-400 text-sm mt-3 text-center bg-blue-900/20 px-4 py-2 rounded-lg mx-auto max-w-md flex items-center justify-center gap-2">
+              <Monitor className="w-4 h-4" />
+              You are sharing your screen
+            </div>
+          )}
           {error && (
             <div className="text-red-400 text-sm mt-3 text-center bg-red-900/20 px-4 py-2 rounded-lg mx-auto max-w-md">
               {error}
@@ -476,6 +495,17 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
             title={videoEnabled ? "Turn Off Video" : "Turn On Video"}
           >
             {!videoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={toggleScreenShare}
+            className={`p-4 rounded-full transition-all ${
+              screenShareEnabled
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+            title={screenShareEnabled ? "Stop Sharing Screen" : "Share Screen"}
+          >
+            {screenShareEnabled ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
           </button>
           <div className="w-px h-10 bg-white/20 mx-2"></div>
           <button
