@@ -268,8 +268,8 @@ export default function ChatList({
         
         // Backend returns an object keyed by user_id, not an array
         if (presenceData && typeof presenceData === 'object') {
-          Object.entries(presenceData).forEach(([oderId, data]: [string, any]) => {
-            newPresenceMap[oderId] = data?.status || "offline";
+          Object.entries(presenceData).forEach(([userId, data]: [string, any]) => {
+            newPresenceMap[userId] = data?.status || "offline";
           });
         }
         
