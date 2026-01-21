@@ -144,6 +144,8 @@ export default function MessageThreadSimple({
     }
 
     console.log('📤 Sending image message, size:', imagePreview.length);
+    console.log('📤 dbChatId:', dbChatId);
+    console.log('📤 chatId:', chatId);
     setSending(true);
     const messageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     
@@ -163,24 +165,25 @@ export default function MessageThreadSimple({
     setMessages((prev) => {
       const updated = [...prev, message];
       messageCache.addMessage(chatId, message, dbChatId || undefined);
-      console.log('✅ Added image message to state');
+      console.log('✅ Added image message to state, total messages:', updated.length);
       return updated;
     });
     
     // Clear preview
     setImagePreview(null);
+    console.log('✅ Cleared image preview');
 
     try {
       // Save to database
       console.log('💾 Saving image to database...');
-      await messagesApi.saveMessage({
+      const saveResult = await messagesApi.saveMessage({
         id: messageId,
         chatId: dbChatId,
         content: imagePreview,
         type: "file",
       });
       
-      console.log('✅ Image saved to database');
+      console.log('✅ Image saved to database, result:', saveResult);
       
       // Update status to "sent"
       setMessages((prev) => {
@@ -188,6 +191,7 @@ export default function MessageThreadSimple({
           m.id === messageId ? { ...m, status: "sent" as const } : m
         );
         messageCache.updateMessageStatus(chatId, messageId, "sent", dbChatId || undefined);
+        console.log('✅ Updated message status to sent');
         return updated;
       });
       
@@ -221,6 +225,7 @@ export default function MessageThreadSimple({
       }, 5000);
     } finally {
       setSending(false);
+      console.log('✅ Send image complete, sending:', false);
     }
   };
 
@@ -269,6 +274,8 @@ export default function MessageThreadSimple({
   // Handle real-time message notifications
   const handleNewMessage = useCallback(async (notification: any) => {
     console.log("📨 Real-time notification received:", notification);
+    console.log("📨 Notification type field:", notification.type);
+    console.log("📨 Notification content preview:", notification.content?.substring(0, 50));
     
     // Skip if this is our own message - we already have it optimistically
     if (notification.senderId === userId) {
