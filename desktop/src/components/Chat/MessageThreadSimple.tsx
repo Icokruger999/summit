@@ -67,6 +67,36 @@ export default function MessageThreadSimple({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // Generate consistent color for user based on their ID
+  const getUserColor = (userId: string, isOwn: boolean) => {
+    if (isOwn) {
+      return "bg-gradient-to-br from-blue-400 to-sky-500";
+    }
+    
+    // Generate color based on user ID hash
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Define color palette (excluding blue which is for own messages)
+    const colors = [
+      "bg-gradient-to-br from-orange-400 to-amber-500",
+      "bg-gradient-to-br from-purple-400 to-pink-500",
+      "bg-gradient-to-br from-green-400 to-emerald-500",
+      "bg-gradient-to-br from-red-400 to-rose-500",
+      "bg-gradient-to-br from-indigo-400 to-purple-500",
+      "bg-gradient-to-br from-teal-400 to-cyan-500",
+      "bg-gradient-to-br from-yellow-400 to-orange-500",
+      "bg-gradient-to-br from-pink-400 to-rose-500",
+      "bg-gradient-to-br from-lime-400 to-green-500",
+      "bg-gradient-to-br from-fuchsia-400 to-purple-500",
+    ];
+    
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   // Handle paste event for images
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
@@ -1187,8 +1217,6 @@ export default function MessageThreadSimple({
     } catch (error: any) {
       console.error("❌ Error editing message:", error);
       console.error("Error details:", error.message, error.response);
-      // Show error to user
-      alert(`Failed to edit message: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -1455,10 +1483,8 @@ export default function MessageThreadSimple({
                     {/* Profile picture */}
                     <div className="flex-shrink-0 mr-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold ${
-                        isOwnMessage 
-                          ? "bg-gradient-to-br from-blue-400 to-sky-500 text-[9px]" 
-                          : "bg-gradient-to-br from-orange-400 to-amber-500 text-xs"
-                      }`}>
+                        getUserColor(message.senderId, isOwnMessage)
+                      } ${isOwnMessage ? "text-[9px]" : "text-xs"}`}>
                         {getInitials(message.senderName, isOwnMessage)}
                       </div>
                     </div>
