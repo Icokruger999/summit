@@ -118,8 +118,12 @@ export default function MessageThreadSimple({
         const reader = new FileReader();
         reader.onload = (event) => {
           const base64 = event.target?.result as string;
-          setImagePreview(base64);
           console.log('✅ Image converted to base64, size:', base64.length);
+          // Use setTimeout to ensure state update happens after event handling
+          setTimeout(() => {
+            setImagePreview(base64);
+            console.log('✅ Image preview set');
+          }, 0);
         };
         reader.onerror = (error) => {
           console.error('❌ Error reading image:', error);
@@ -133,8 +137,12 @@ export default function MessageThreadSimple({
 
   // Send image message
   const handleSendImage = async () => {
-    if (!imagePreview || !dbChatId || sending) return;
+    if (!imagePreview || !dbChatId || sending) {
+      console.log('❌ Cannot send image:', { hasPreview: !!imagePreview, hasDbChatId: !!dbChatId, sending });
+      return;
+    }
 
+    console.log('📤 Sending image message, size:', imagePreview.length);
     setSending(true);
     const messageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     
@@ -148,10 +156,13 @@ export default function MessageThreadSimple({
       status: "sending",
     };
 
+    console.log('📝 Created message object:', { id: messageId, type: message.type, contentLength: message.content.length });
+
     // Add message optimistically
     setMessages((prev) => {
       const updated = [...prev, message];
       messageCache.addMessage(chatId, message, dbChatId || undefined);
+      console.log('✅ Added image message to state');
       return updated;
     });
     
@@ -160,12 +171,15 @@ export default function MessageThreadSimple({
 
     try {
       // Save to database
+      console.log('💾 Saving image to database...');
       await messagesApi.saveMessage({
         id: messageId,
         chatId: dbChatId,
         content: imagePreview,
         type: "file",
       });
+      
+      console.log('✅ Image saved to database');
       
       // Update status to "sent"
       setMessages((prev) => {
@@ -188,7 +202,7 @@ export default function MessageThreadSimple({
       
       console.log('✅ Image message sent successfully');
     } catch (error) {
-      console.error("Error sending image:", error);
+      console.error("❌ Error sending image:", error);
       // Update status to "failed"
       setMessages((prev) => {
         const updated = prev.map((m) =>
@@ -1193,6 +1207,7 @@ export default function MessageThreadSimple({
     console.log("📝 Editing message:", messageId, "New content:", editingContent.trim());
 
     try {
+      console.log("🔄 Calling messagesApi.editMessage...");
       const result = await messagesApi.editMessage(messageId, editingContent.trim());
       console.log("✅ Message edited successfully:", result);
       
@@ -1216,7 +1231,12 @@ export default function MessageThreadSimple({
       console.log("✅ Edit complete, UI updated");
     } catch (error: any) {
       console.error("❌ Error editing message:", error);
-      console.error("Error details:", error.message, error.response);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
     }
   };
 
@@ -1534,14 +1554,20 @@ export default function MessageThreadSimple({
                             </div>
                           ) : (
                             <>
-                              {message.type === "file" && message.content.startsWith('data:image') ? (
+                              {message.type === "file" && message.content && message.content.startsWith('data:image') ? (
                                 // Display image
-                                <img 
-                                  src={message.content} 
-                                  alt="Shared image" 
-                                  className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => window.open(message.content, '_blank')}
-                                />
+                                <div>
+                                  <img 
+                                    src={message.content} 
+                                    alt="Shared image" 
+                                    className="max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(message.content, '_blank')}
+                                    onError={(e) => {
+                                      console.error('❌ Error loading image:', e);
+                                      console.log('Image data length:', message.content?.length);
+                                    }}
+                                  />
+                                </div>
                               ) : (
                                 <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                                   {message.content}
