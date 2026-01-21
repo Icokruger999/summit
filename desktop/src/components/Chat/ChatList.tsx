@@ -157,7 +157,7 @@ export default function ChatList({
               last_message: lastMessage,
               last_message_at: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
               last_message_sender_id: senderId || chat.last_message_sender_id,
-              unreadCount: newUnreadCount,
+              unreadCount: newUnreadCount > 0 ? newUnreadCount : undefined,
               hasUnread: newUnreadCount > 0,
             };
           }
