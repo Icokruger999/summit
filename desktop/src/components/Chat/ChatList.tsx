@@ -458,14 +458,21 @@ export default function ChatList({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
                                   <h3 className="font-semibold text-gray-900 truncate">{chat.name}</h3>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    {chat.unreadCount && chat.unreadCount > 0 && (
+                                      <span className="px-2 py-0.5 text-xs font-semibold text-white bg-green-600 rounded-full min-w-[20px] text-center">
+                                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                                      </span>
+                                    )}
                                     {chat.last_message_at && (
-                                      <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                      <span className="text-xs text-gray-400">
                                         {formatTime(new Date(chat.last_message_at))}
                                       </span>
                                     )}
+                                  </div>
                                 </div>
                                 {chat.last_message && (
-                                  <p className="text-sm text-gray-500 truncate">
+                                  <p className={`text-sm truncate ${chat.unreadCount && chat.unreadCount > 0 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
                                     {chat.last_message_sender_id === userId ? (
                                       <span>You: {chat.last_message}</span>
                                     ) : (
@@ -563,7 +570,7 @@ export default function ChatList({
                                   <h3 className="font-semibold text-gray-900 truncate">{chat.name}</h3>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {chat.unreadCount && chat.unreadCount > 0 && (
-                                      <span className="px-2 py-0.5 text-xs font-semibold text-white bg-blue-600 rounded-full min-w-[20px] text-center">
+                                      <span className="px-2 py-0.5 text-xs font-semibold text-white bg-green-600 rounded-full min-w-[20px] text-center">
                                         {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                                       </span>
                                     )}
