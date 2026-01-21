@@ -118,11 +118,30 @@ export default function MessageThreadSimple({
       console.log("✅ Message is for current chat, adding immediately...");
       
       // Add message immediately from notification (no DB reload needed)
-      console.log("📝 Creating message from notification. SenderName:", notification.senderName, "SenderId:", notification.senderId);
+      console.log("📝 Creating message from notification:", {
+        senderName: notification.senderName,
+        sender_name: notification.sender_name,
+        senderId: notification.senderId,
+        fullNotification: notification
+      });
+      
+      // Try to get sender name from notification, or fetch from API if needed
+      let senderName = notification.senderName || notification.sender_name;
+      
+      // If no sender name in notification, try to fetch it
+      if (!senderName && notification.senderId) {
+        console.log("⚠️ No sender name in notification, will show as Unknown temporarily");
+        // We'll reload messages to get the correct name
+        setTimeout(() => {
+          console.log("🔄 Reloading messages to get correct sender names");
+          loadMessages();
+        }, 500);
+      }
+      
       const newMessage: Message = {
         id: notification.messageId,
         senderId: notification.senderId,
-        senderName: notification.senderName || notification.sender_name || "Unknown",
+        senderName: senderName || "Unknown",
         content: notification.content,
         timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
         type: (notification.type || "text") as "text" | "file",
