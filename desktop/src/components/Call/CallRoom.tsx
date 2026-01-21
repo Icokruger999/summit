@@ -436,23 +436,38 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
               <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-lg">
                 <div className="relative w-full h-full flex items-center justify-center">
                   {screenShareEnabled ? (
-                    // You are sharing
+                    // You are sharing - show a preview of what you're sharing
                     <>
-                      <video
-                        ref={localVideoElementRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="w-full h-full object-contain"
-                      />
-                      <div className="absolute bottom-4 left-4">
-                        <span className="bg-black/80 px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-2">
-                          <Monitor className="w-4 h-4" />
-                          You are presenting
-                        </span>
+                      <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-8">
+                        <div className="max-w-4xl w-full">
+                          {/* Preview of shared screen */}
+                          <div className="relative bg-black rounded-lg overflow-hidden shadow-2xl border-4 border-blue-500">
+                            <video
+                              ref={localVideoElementRef}
+                              autoPlay
+                              muted
+                              playsInline
+                              className="w-full h-auto"
+                              style={{ maxHeight: '60vh' }}
+                            />
+                            <div className="absolute top-4 left-4">
+                              <span className="bg-blue-600 px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 shadow-lg">
+                                <Monitor className="w-4 h-4" />
+                                Preview - What others see
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Info text below preview */}
+                          <div className="mt-6 text-center">
+                            <p className="text-white text-lg font-medium mb-2">You are presenting to {remoteAttendees.size} {remoteAttendees.size === 1 ? 'person' : 'people'}</p>
+                            <p className="text-gray-400 text-sm">Switch to the window you want to share. Others see your screen in full size.</p>
+                          </div>
+                        </div>
                       </div>
+                      
                       {/* Stop Sharing Button */}
-                      <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
                         <button
                           onClick={toggleScreenShare}
                           className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg flex items-center gap-2 transition-all"
