@@ -939,23 +939,37 @@ export default function MessageThreadSimple({
 
   // Handle edit message
   const handleEditMessage = async (messageId: string) => {
-    if (!editingContent.trim() || !dbChatId) return;
+    if (!editingContent.trim()) {
+      console.warn("⚠️ Cannot edit: content is empty");
+      return;
+    }
+    
+    if (!dbChatId) {
+      console.error("❌ Cannot edit: no chat ID");
+      return;
+    }
+
+    console.log("📝 Editing message:", messageId, "New content:", editingContent.trim());
 
     try {
-      await messagesApi.editMessage(messageId, editingContent.trim());
+      const result = await messagesApi.editMessage(messageId, editingContent.trim());
+      console.log("✅ Message edited successfully:", result);
       
-      // Update message in state
-      setMessages((prev) =>
-        prev.map((msg) =>
+      // Update message in state and cache
+      setMessages((prev) => {
+        const updated = prev.map((msg) =>
           msg.id === messageId ? { ...msg, content: editingContent.trim() } : msg
-        )
-      );
+        );
+        // Update cache with edited message
+        messageCache.set(chatId, updated, dbChatId || undefined);
+        return updated;
+      });
       
       setEditingMessageId(null);
       setEditingContent("");
       setMessageMenuOpen(null);
     } catch (error) {
-      console.error("Error editing message:", error);
+      console.error("❌ Error editing message:", error);
     }
   };
 
