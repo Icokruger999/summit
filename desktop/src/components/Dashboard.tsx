@@ -382,10 +382,21 @@ export default function Dashboard({ user }: DashboardProps) {
         setChats((prev) =>
           prev.map((c) => {
             if (c.id === notification.chatId || c.dbId === notification.chatId) {
+              // Safely handle timestamp - use current time if invalid
+              let timestamp: string;
+              try {
+                timestamp = notification.timestamp 
+                  ? new Date(notification.timestamp).toISOString()
+                  : new Date().toISOString();
+              } catch (error) {
+                console.warn("Invalid timestamp in notification, using current time");
+                timestamp = new Date().toISOString();
+              }
+              
               return {
                 ...c,
                 last_message: notification.content,
-                last_message_at: new Date(notification.timestamp).toISOString(),
+                last_message_at: timestamp,
                 last_message_sender_id: notification.senderId,
                 unreadCount: (c.unreadCount || 0) + (c.id === selectedChat ? 0 : 1),
                 hasUnread: c.id !== selectedChat,
