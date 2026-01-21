@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, startOfWeek, addDays, isSameDay, parseISO, subWeeks, addWeeks, startOfDay } from "date-fns";
 import CreateMeetingModal from "./CreateMeetingModal";
-import { Calendar, Plus, Clock, Users, Video, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Plus, Clock, Users, Video, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { sounds } from "../../lib/sounds";
 import { SkeletonMeetingCard, SkeletonText } from "../ui/Skeleton";
 
@@ -45,6 +45,29 @@ export default function MeetingCalendar({
       window.removeEventListener('refreshMeetings' as any, handleRefreshMeetings as EventListener);
     };
   }, [userId]);
+
+  const loadMeetings = async (showLoading = true) => {
+    try {
+
+  const handleCancelMeeting = async (meetingId: string, meetingTitle: string) => {
+    // Confirm before canceling
+    if (!confirm(`Are you sure you want to cancel "${meetingTitle}"? All participants will be notified.`)) {
+      return;
+    }
+
+    try {
+      const { meetingsApi } = await import("../../lib/api");
+      await meetingsApi.delete(meetingId);
+      
+      console.log(`✅ Meeting canceled: ${meetingId}`);
+      
+      // Reload meetings
+      loadMeetings(false);
+    } catch (error: any) {
+      console.error("Error canceling meeting:", error);
+      alert(`Failed to cancel meeting: ${error.message || "Unknown error"}`);
+    }
+  };
 
   const loadMeetings = async (showLoading = true) => {
     try {
@@ -269,16 +292,28 @@ export default function MeetingCalendar({
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={() => {
-                      sounds.callInitiated();
-                      onJoinMeeting(meeting.room_id);
-                    }}
-                    className="px-6 py-3 text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 font-medium ml-4"
-                  >
-                    <Video className="w-4 h-4" />
-                    Join
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    {meeting.created_by === userId && (
+                      <button
+                        onClick={() => handleCancelMeeting(meeting.id, meeting.title)}
+                        className="px-4 py-3 text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 font-medium"
+                        title="Cancel meeting"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        sounds.callInitiated();
+                        onJoinMeeting(meeting.room_id);
+                      }}
+                      className="px-6 py-3 text-white bg-gradient-to-r from-blue-600 to-sky-600 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 font-medium"
+                    >
+                      <Video className="w-4 h-4" />
+                      Join
+                    </button>
+                  </div>
                 </div>
               </div>
             ));
