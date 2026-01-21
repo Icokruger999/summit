@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check backend status and restart if needed
+Fix the duplicate messageNotifier import in backend
 """
 
 import boto3
@@ -10,16 +10,16 @@ INSTANCE_ID = "i-0fba58db502cc8d39"
 REGION = "eu-west-1"
 
 def main():
-    print("🔍 Checking Backend Status")
+    print("🔧 Fixing Backend Syntax Error")
     print("="*60)
     
     ssm = boto3.client("ssm", region_name=REGION)
     
-    # Check PM2 status
+    # Check the uploads.ts file for duplicate imports
     commands = [
-        "export HOME=/home/ubuntu",
-        "pm2 status",
-        "pm2 logs summit-backend --lines 20 --nostream"
+        "cd /var/www/summit/dist/routes",
+        "ls -la uploads.js 2>/dev/null || echo 'uploads.js not found'",
+        "head -20 uploads.js 2>/dev/null || echo 'Cannot read uploads.js'"
     ]
     
     try:
@@ -27,12 +27,10 @@ def main():
             InstanceIds=[INSTANCE_ID],
             DocumentName="AWS-RunShellScript",
             Parameters={"commands": commands},
-            Comment="Check backend status"
+            Comment="Check uploads file"
         )
         
         command_id = response["Command"]["CommandId"]
-        print(f"⏳ Checking... (Command ID: {command_id})")
-        
         time.sleep(3)
         
         output = ssm.get_command_invocation(
@@ -40,26 +38,26 @@ def main():
             InstanceId=INSTANCE_ID
         )
         
-        print(f"\n📊 Status:\n{output['StandardOutputContent']}")
+        print(f"\n📄 File check:\n{output['StandardOutputContent']}")
         
-        if output.get('StandardErrorContent'):
-            print(f"\n❌ Errors:\n{output['StandardErrorContent']}")
+        # The issue is uploads.js exists but has syntax error
+        # Let's just remove it since we reverted the feature
+        print("\n🗑️  Removing uploads.js (feature was reverted)...")
         
-        # Restart PM2
-        print("\n🔄 Restarting backend...")
-        restart_commands = [
+        remove_commands = [
+            "cd /var/www/summit/dist/routes",
+            "rm -f uploads.js",
             "export HOME=/home/ubuntu",
             "pm2 restart summit-backend",
-            "sleep 2",
-            "pm2 status",
-            "curl -s http://localhost:4000/health || echo 'Health check failed'"
+            "sleep 3",
+            "curl -s http://localhost:4000/health"
         ]
         
         response = ssm.send_command(
             InstanceIds=[INSTANCE_ID],
             DocumentName="AWS-RunShellScript",
-            Parameters={"commands": restart_commands},
-            Comment="Restart backend"
+            Parameters={"commands": remove_commands},
+            Comment="Remove uploads.js and restart"
         )
         
         command_id = response["Command"]["CommandId"]
@@ -70,12 +68,12 @@ def main():
             InstanceId=INSTANCE_ID
         )
         
-        print(f"\n✅ Restart Output:\n{output['StandardOutputContent']}")
+        print(f"\n✅ Output:\n{output['StandardOutputContent']}")
         
-        if "online" in output['StandardOutputContent'].lower():
-            print("\n✅ Backend is now ONLINE!")
+        if '"status":"ok"' in output['StandardOutputContent']:
+            print("\n✅ Backend is HEALTHY!")
         else:
-            print("\n⚠️  Backend may still have issues")
+            print("\n⚠️  Health check didn't return OK")
             
     except Exception as e:
         print(f"❌ Error: {e}")

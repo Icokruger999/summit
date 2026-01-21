@@ -65,6 +65,119 @@ export default function MessageThreadSimple({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const chatMenuRef = useRef<HTMLDivElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Handle paste event for images
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Check if the item is an image
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault(); // Prevent default paste behavior
+        
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        console.log('📎 Image pasted:', file.name, file.type, file.size);
+
+        // Convert image to base64
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target?.result as string;
+          setImagePreview(base64);
+          console.log('✅ Image converted to base64, size:', base64.length);
+        };
+        reader.onerror = (error) => {
+          console.error('❌ Error reading image:', error);
+        };
+        reader.readAsDataURL(file);
+        
+        break; // Only handle first image
+      }
+    }
+  };
+
+  // Send image message
+  const handleSendImage = async () => {
+    if (!imagePreview || !dbChatId || sending) return;
+
+    setSending(true);
+    const messageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    const message: Message = {
+      id: messageId,
+      senderId: userId,
+      senderName: "You",
+      content: imagePreview, // Store base64 as content
+      timestamp: new Date(),
+      type: "file", // Mark as file type
+      status: "sending",
+    };
+
+    // Add message optimistically
+    setMessages((prev) => {
+      const updated = [...prev, message];
+      messageCache.addMessage(chatId, message, dbChatId || undefined);
+      return updated;
+    });
+    
+    // Clear preview
+    setImagePreview(null);
+
+    try {
+      // Save to database
+      await messagesApi.saveMessage({
+        id: messageId,
+        chatId: dbChatId,
+        content: imagePreview,
+        type: "file",
+      });
+      
+      // Update status to "sent"
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m.id === messageId ? { ...m, status: "sent" as const } : m
+        );
+        messageCache.updateMessageStatus(chatId, messageId, "sent", dbChatId || undefined);
+        return updated;
+      });
+      
+      // Update chat list
+      window.dispatchEvent(new CustomEvent('messageUpdate', {
+        detail: {
+          chatId: dbChatId,
+          lastMessage: "📷 Image",
+          timestamp: new Date(),
+          senderId: userId,
+        }
+      }));
+      
+      console.log('✅ Image message sent successfully');
+    } catch (error) {
+      console.error("Error sending image:", error);
+      // Update status to "failed"
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m.id === messageId ? { ...m, status: "failed" as const } : m
+        );
+        messageCache.updateMessageStatus(chatId, messageId, "failed", dbChatId || undefined);
+        return updated;
+      });
+      setTimeout(() => {
+        setMessages((prev) => {
+          const filtered = prev.filter(m => m.id !== messageId);
+          messageCache.set(chatId, filtered, dbChatId || undefined);
+          return filtered;
+        });
+      }, 5000);
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Close status dropdown when clicking outside
   useEffect(() => {
@@ -1395,9 +1508,19 @@ export default function MessageThreadSimple({
                             </div>
                           ) : (
                             <>
-                              <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                                {message.content}
-                              </p>
+                              {message.type === "file" && message.content.startsWith('data:image') ? (
+                                // Display image
+                                <img 
+                                  src={message.content} 
+                                  alt="Shared image" 
+                                  className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(message.content, '_blank')}
+                                />
+                              ) : (
+                                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                  {message.content}
+                                </p>
+                              )}
                               {message.editedAt && (
                                 <span className="text-xs text-gray-500 italic mt-1 block">
                                   (edited)
@@ -1489,13 +1612,41 @@ export default function MessageThreadSimple({
 
       {/* Input */}
       <div className="p-4 border-t border-gray-200 bg-white">
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-start gap-3">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="max-w-xs max-h-48 rounded-lg"
+              />
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleSendImage}
+                  disabled={sending}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  Send Image
+                </button>
+                <button
+                  onClick={() => setImagePreview(null)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex items-end gap-3">
           <div className="flex-1 relative">
             <textarea
               value={newMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
+              onPaste={handlePaste}
+              placeholder="Type a message or paste an image..."
               disabled={sending || !dbChatId}
               className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all max-h-32"
               rows={1}
