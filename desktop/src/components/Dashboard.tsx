@@ -275,6 +275,52 @@ export default function Dashboard({ user }: DashboardProps) {
     };
   }, []);
 
+  // Listen for meeting invitation notifications
+  useEffect(() => {
+    const handleMeetingInvitation = (event: CustomEvent<any>) => {
+      const { meetingTitle, inviterName, meetingStartTime } = event.detail;
+      console.log('📅 Meeting invitation received:', meetingTitle);
+      
+      // Show notification
+      setNotification({
+        message: `${inviterName} invited you to "${meetingTitle}"`,
+        type: "info",
+      });
+      
+      // Play notification sound
+      const notificationsEnabled = localStorage.getItem("notificationsEnabled") !== "false";
+      if (notificationsEnabled) {
+        try {
+          sounds.notification();
+        } catch (e) {
+          // Silently handle sound errors
+        }
+      }
+      
+      // Show desktop notification
+      if (Notification.permission === "granted") {
+        try {
+          const startDate = new Date(meetingStartTime);
+          const formattedTime = startDate.toLocaleString();
+          new Notification(`Meeting Invitation: ${meetingTitle}`, {
+            body: `${inviterName} invited you to a meeting at ${formattedTime}`,
+            icon: "/logo.png",
+          });
+        } catch (e) {
+          console.error("Error showing desktop notification:", e);
+        }
+      }
+      
+      // Trigger refresh of meeting invitations
+      window.dispatchEvent(new CustomEvent('refreshMeetingInvitations'));
+    };
+
+    window.addEventListener('meetingInvitation' as any, handleMeetingInvitation as EventListener);
+    return () => {
+      window.removeEventListener('meetingInvitation' as any, handleMeetingInvitation as EventListener);
+    };
+  }, []);
+
   // Fetch persistent notifications on mount (for offline notifications)
   useEffect(() => {
     const fetchPersistentNotifications = async () => {

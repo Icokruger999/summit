@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
 import { query } from "../lib/db.js";
 import { checkAndCreateChatRequest } from "./chatRequests.js";
+import { messageNotifier } from "../lib/messageNotifier.js";
 
 const router = express.Router();
 
@@ -146,6 +147,27 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
       Promise.all(chatRequestPromises).catch(err => 
         console.error('Error in chat request batch:', err)
       );
+
+      // Get inviter info for notification
+      const inviterInfo = await query(
+        `SELECT name, email FROM users WHERE id = $1`,
+        [userId]
+      );
+      const inviterName = inviterInfo.rows[0]?.name || inviterInfo.rows[0]?.email || "Someone";
+
+      // Send WebSocket notifications to all participants about the meeting invitation
+      participant_ids.forEach((participantId: string) => {
+        messageNotifier.notifyUser(participantId, {
+          meetingId: meeting.id,
+          meetingTitle: title,
+          meetingStartTime: start_time,
+          meetingEndTime: end_time,
+          inviterName,
+          inviterId: userId,
+        }, "MEETING_INVITATION");
+      });
+      
+      console.log(`📅 Sent meeting invitation notifications to ${participant_ids.length} participants`);
     }
 
     // Get participants

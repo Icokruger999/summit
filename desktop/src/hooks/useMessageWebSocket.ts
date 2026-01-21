@@ -165,6 +165,12 @@ export function useMessageWebSocket({
             window.dispatchEvent(new CustomEvent('messageDeleted', {
               detail: data.data
             }));
+          } else if (data.type === "MEETING_INVITATION") {
+            console.log("📅 Received meeting invitation notification:", data.data);
+            // Dispatch event for meeting invitation
+            window.dispatchEvent(new CustomEvent('meetingInvitation', {
+              detail: data.data
+            }));
           } else if (data.type === "CONNECTED") {
             console.log("✅ WebSocket authenticated for user:", data.userId);
           }
