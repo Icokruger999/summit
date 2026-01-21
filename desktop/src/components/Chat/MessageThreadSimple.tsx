@@ -223,6 +223,15 @@ export default function MessageThreadSimple({
             return prev; // Return unchanged state on error
           }
         });
+        
+        // Dispatch messageUpdate event to update chat list
+        window.dispatchEvent(new CustomEvent('messageUpdate', {
+          detail: {
+            chatId: event.detail.chatId,
+            lastMessage: event.detail.content,
+            timestamp: new Date(event.detail.editedAt),
+          }
+        }));
       }
     } catch (error) {
       console.error("❌ Error handling message edited notification:", error);
