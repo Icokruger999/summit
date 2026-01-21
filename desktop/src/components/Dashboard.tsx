@@ -375,6 +375,14 @@ export default function Dashboard({ user }: DashboardProps) {
     onNewMessage: (notification: any) => {
       console.log("📨 Global WebSocket received message:", notification);
       
+      // IMPORTANT: Only handle NEW_MESSAGE notifications here
+      // MESSAGE_EDITED and MESSAGE_DELETED are handled by their own event listeners
+      // Check if this is an edit/delete notification (has editedAt or no senderId)
+      if (notification.editedAt || !notification.senderId) {
+        console.log("⏭️ Skipping edit/delete notification in onNewMessage handler");
+        return;
+      }
+      
       // Update chat list immediately
       const chat = chats.find((c) => c.id === notification.chatId || c.dbId === notification.chatId);
       if (chat) {
