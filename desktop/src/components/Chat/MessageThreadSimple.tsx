@@ -1194,7 +1194,9 @@ export default function MessageThreadSimple({
 
   // Handle edit message
   const handleEditMessage = async (messageId: string) => {
-    if (!editingContent.trim()) {
+    const trimmedContent = editingContent.trim();
+    
+    if (!trimmedContent) {
       console.warn("⚠️ Cannot edit: content is empty");
       return;
     }
@@ -1204,31 +1206,37 @@ export default function MessageThreadSimple({
       return;
     }
 
-    console.log("📝 Editing message:", messageId, "New content:", editingContent.trim());
+    console.log("📝 Starting edit:", { messageId, oldContent: messages.find(m => m.id === messageId)?.content, newContent: trimmedContent });
 
     try {
       console.log("🔄 Calling messagesApi.editMessage...");
-      const result = await messagesApi.editMessage(messageId, editingContent.trim());
-      console.log("✅ Message edited successfully:", result);
+      const result = await messagesApi.editMessage(messageId, trimmedContent);
+      console.log("✅ API response:", result);
       
       // Update message in state and cache immediately
       setMessages((prev) => {
+        const messageToUpdate = prev.find(m => m.id === messageId);
+        console.log("📝 Found message to update:", messageToUpdate);
+        
         const updated = prev.map((msg) =>
           msg.id === messageId 
-            ? { ...msg, content: editingContent.trim(), editedAt: result.editedAt || new Date().toISOString() } 
+            ? { ...msg, content: trimmedContent, editedAt: result.editedAt || new Date().toISOString() } 
             : msg
         );
+        
+        console.log("✅ Updated messages array, new content:", updated.find(m => m.id === messageId)?.content);
+        
         // Update cache with edited message
         messageCache.set(chatId, updated, dbChatId || undefined);
-        console.log("✅ Updated message in state and cache");
         return updated;
       });
       
+      // Clear editing state
       setEditingMessageId(null);
       setEditingContent("");
       setMessageMenuOpen(null);
       
-      console.log("✅ Edit complete, UI updated");
+      console.log("✅ Edit complete, UI should be updated");
     } catch (error: any) {
       console.error("❌ Error editing message:", error);
       console.error("Error details:", {
@@ -1555,13 +1563,12 @@ export default function MessageThreadSimple({
                           ) : (
                             <>
                               {message.type === "file" && message.content && message.content.startsWith('data:image') ? (
-                                // Display image
+                                // Display image inline (no click to open)
                                 <div>
                                   <img 
                                     src={message.content} 
                                     alt="Shared image" 
-                                    className="max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => window.open(message.content, '_blank')}
+                                    className="max-w-xs max-h-64 rounded-lg"
                                     onError={(e) => {
                                       console.error('❌ Error loading image:', e);
                                       console.log('Image data length:', message.content?.length);

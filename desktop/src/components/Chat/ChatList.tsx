@@ -495,9 +495,9 @@ export default function ChatList({
                                 {chat.last_message && (
                                   <p className={`text-sm truncate ${chat.unreadCount && chat.unreadCount > 0 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
                                     {chat.last_message_sender_id === userId ? (
-                                      <span>You: {chat.last_message}</span>
+                                      <span>You: {chat.last_message.startsWith('data:image') ? '📷 Image' : chat.last_message}</span>
                                     ) : (
-                                      chat.last_message
+                                      chat.last_message.startsWith('data:image') ? '📷 Image' : chat.last_message
                                     )}
                                   </p>
                                 )}
@@ -612,9 +612,9 @@ export default function ChatList({
                                 {chat.last_message && (
                                   <p className={`text-sm truncate ${chat.unreadCount && chat.unreadCount > 0 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
                                     {chat.last_message_sender_id === userId ? (
-                                      <span>You: {chat.last_message}</span>
+                                      <span>You: {chat.last_message.startsWith('data:image') ? '📷 Image' : chat.last_message}</span>
                                     ) : (
-                                      chat.last_message
+                                      chat.last_message.startsWith('data:image') ? '📷 Image' : chat.last_message
                                     )}
                                   </p>
                                 )}
