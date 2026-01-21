@@ -1545,7 +1545,10 @@ export default function MessageThreadSimple({
                               />
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => handleEditMessage(message.id)}
+                                  onClick={() => {
+                                    console.log("🔘 Save button clicked for message:", message.id);
+                                    handleEditMessage(message.id);
+                                  }}
                                   className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                                 >
                                   Save
