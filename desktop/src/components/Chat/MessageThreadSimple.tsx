@@ -196,6 +196,40 @@ export default function MessageThreadSimple({
     }
   }, [dbChatId, userId, chatId]);
 
+  // Handle message edited notifications
+  const handleMessageEdited = useCallback((event: CustomEvent<{ messageId: string, chatId: string, content: string, editedAt: string }>) => {
+    if (event.detail.chatId === dbChatId && dbChatId) {
+      console.log("✏️ Message edited notification received:", event.detail);
+      
+      // Update message in state
+      setMessages((prev) => {
+        const updated = prev.map((msg) =>
+          msg.id === event.detail.messageId
+            ? { ...msg, content: event.detail.content, editedAt: event.detail.editedAt }
+            : msg
+        );
+        // Update cache
+        messageCache.set(chatId, updated, dbChatId);
+        return updated;
+      });
+    }
+  }, [dbChatId, chatId]);
+
+  // Handle message deleted notifications
+  const handleMessageDeleted = useCallback((event: CustomEvent<{ messageId: string, chatId: string }>) => {
+    if (event.detail.chatId === dbChatId && dbChatId) {
+      console.log("🗑️ Message deleted notification received:", event.detail);
+      
+      // Remove message from state
+      setMessages((prev) => {
+        const updated = prev.filter((msg) => msg.id !== event.detail.messageId);
+        // Update cache
+        messageCache.set(chatId, updated, dbChatId);
+        return updated;
+      });
+    }
+  }, [dbChatId, chatId]);
+
   // Listen for new message notifications from Dashboard's WebSocket
   useEffect(() => {
     const handleNewMessageNotification = (event: CustomEvent<any>) => {
@@ -289,40 +323,6 @@ export default function MessageThreadSimple({
       }
     };
 
-    // Handle message edited notifications
-    const handleMessageEdited = (event: CustomEvent<{ messageId: string, chatId: string, content: string, editedAt: string }>) => {
-      if (event.detail.chatId === dbChatId && dbChatId) {
-        console.log("✏️ Message edited notification received:", event.detail);
-        
-        // Update message in state
-        setMessages((prev) => {
-          const updated = prev.map((msg) =>
-            msg.id === event.detail.messageId
-              ? { ...msg, content: event.detail.content, editedAt: event.detail.editedAt }
-              : msg
-          );
-          // Update cache
-          messageCache.set(chatId, updated, dbChatId);
-          return updated;
-        });
-      }
-    };
-
-    // Handle message deleted notifications
-    const handleMessageDeleted = (event: CustomEvent<{ messageId: string, chatId: string }>) => {
-      if (event.detail.chatId === dbChatId && dbChatId) {
-        console.log("🗑️ Message deleted notification received:", event.detail);
-        
-        // Remove message from state
-        setMessages((prev) => {
-          const updated = prev.filter((msg) => msg.id !== event.detail.messageId);
-          // Update cache
-          messageCache.set(chatId, updated, dbChatId);
-          return updated;
-        });
-      }
-    };
-
     window.addEventListener('newMessageNotification' as any, handleNewMessageNotification as EventListener);
     window.addEventListener('messagesRead' as any, handleMessagesRead as EventListener);
     window.addEventListener('typingIndicator' as any, handleTypingIndicator as EventListener);
@@ -337,7 +337,7 @@ export default function MessageThreadSimple({
       // Clear all typing timeouts on cleanup
       Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
     };
-  }, [dbChatId, userId, chatId, handleNewMessage]);
+  }, [dbChatId, userId, chatId, handleNewMessage, handleMessageEdited, handleMessageDeleted]);
 
   // Periodically poll for read receipts to ensure statuses stay up-to-date
   // This is a fallback in case WebSocket notifications are delayed (only for messages older than 5 seconds)
