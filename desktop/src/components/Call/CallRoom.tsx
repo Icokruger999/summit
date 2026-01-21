@@ -420,12 +420,12 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
         </div>
       )}
 
-      {/* Video Area - Teams-like layout: Main view + Sidebar */}
-      <div className="flex-1 flex gap-2 p-2 overflow-hidden">
-        {/* Main Video Area - Screen share or active speaker */}
-        <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-lg">
-          {screenShareEnabled ? (
-            /* Your screen share takes main view */
+      {/* Video Area - Conditional layout based on screen sharing */}
+      {screenShareEnabled ? (
+        /* Teams-like layout: Main view (screen share) + Right Sidebar (participants) */
+        <div className="flex-1 flex gap-2 p-2 overflow-hidden">
+          {/* Main Video Area - Your screen share */}
+          <div className="flex-1 flex items-center justify-center bg-gray-900 rounded-lg">
             <div className="relative w-full h-full flex items-center justify-center">
               <video
                 ref={localVideoElementRef}
@@ -440,7 +440,7 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                   You are presenting
                 </span>
               </div>
-              {/* Stop Sharing Button - Teams-like */}
+              {/* Stop Sharing Button */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2">
                 <button
                   onClick={toggleScreenShare}
@@ -451,13 +451,43 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                 </button>
               </div>
             </div>
-          ) : remoteAttendees.size > 0 && Array.from(remoteAttendees.values())[0].hasVideo ? (
-            /* Remote participant's video takes main view */
-            <div className="relative w-full h-full flex items-center justify-center">
-              {Array.from(remoteAttendees.entries()).slice(0, 1).map(([attendeeId, attendee]) => {
-                const displayName = participantNames.get(attendeeId) || otherUserName || "Participant";
-                return attendee.hasVideo && attendee.tileId !== undefined ? (
-                  <div key={attendeeId} className="relative w-full h-full">
+          </div>
+
+          {/* Right Sidebar - Participant tiles */}
+          <div className="w-64 flex flex-col gap-2 overflow-y-auto">
+            {/* Your video tile */}
+            <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0 border-2 border-blue-500/50">
+              {videoEnabled ? (
+                <video
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">You</span>
+                  </div>
+                </div>
+              )}
+              <div className="absolute bottom-2 left-2">
+                <span className="bg-black/80 px-2 py-1 rounded text-white text-xs font-medium">
+                  You {!audioEnabled && "🔇"}
+                </span>
+              </div>
+            </div>
+
+            {/* Remote participants */}
+            {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => {
+              const displayName = participantNames.get(attendeeId) || otherUserName || "Participant";
+              
+              return (
+                <div 
+                  key={attendeeId} 
+                  className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0 border-2 border-white/10"
+                >
+                  {attendee.hasVideo && attendee.tileId !== undefined ? (
                     <video
                       ref={(el) => {
                         if (el && attendee.tileId !== undefined) {
@@ -467,98 +497,113 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
                       }}
                       autoPlay
                       playsInline
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-4 left-4">
-                      <span className="bg-black/80 px-4 py-2 rounded-lg text-white text-sm font-medium">
-                        {displayName}
-                      </span>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-xl font-bold text-white">
+                          {getInitials(displayName)}
+                        </span>
+                      </div>
                     </div>
+                  )}
+                  <div className="absolute bottom-2 left-2">
+                    <span className="bg-black/80 px-2 py-1 rounded text-white text-xs font-medium">
+                      {displayName}
+                    </span>
                   </div>
-                ) : null;
-              })}
-            </div>
-          ) : (
-            /* No video - show waiting state */
-            <div className="flex items-center justify-center w-full h-full">
-              <div className="text-center">
-                <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-4xl font-bold text-gray-400">
-                    {otherUserName ? getInitials(otherUserName) : "?"}
-                  </span>
                 </div>
-                <p className="text-gray-400 text-lg">Waiting for {otherUserName || "participant"}...</p>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Centered grid layout when no screen sharing */
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex flex-wrap items-center justify-center gap-4 max-w-6xl">
+            
+            {/* Your video tile */}
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500/50 w-80 h-60">
+              {videoEnabled ? (
+                <video
+                  ref={localVideoElementRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">You</span>
+                  </div>
+                </div>
+              )}
+              <div className="absolute bottom-3 left-3">
+                <span className="bg-black/80 px-3 py-1 rounded-full text-white text-sm font-medium">
+                  You {!audioEnabled && "🔇"}
+                </span>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Right Sidebar - Participant tiles */}
-        <div className="w-64 flex flex-col gap-2 overflow-y-auto">
-          {/* Your video tile */}
-          <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0 border-2 border-blue-500/50">
-            {videoEnabled && !screenShareEnabled ? (
-              <video
-                ref={screenShareEnabled ? undefined : localVideoElementRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
-                  <span className="text-xl font-bold text-white">You</span>
+            {/* Remote participants */}
+            {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => {
+              const displayName = participantNames.get(attendeeId) || otherUserName || "Participant";
+              
+              return (
+                <div 
+                  key={attendeeId} 
+                  className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60"
+                >
+                  {attendee.hasVideo && attendee.tileId !== undefined ? (
+                    <video
+                      ref={(el) => {
+                        if (el && attendee.tileId !== undefined) {
+                          remoteVideoRefs.current.set(attendee.tileId, el);
+                          bindVideoElement(attendee.tileId, el);
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-white">
+                          {getInitials(displayName)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-3 left-3">
+                    <span className="bg-black/80 px-3 py-1 rounded-full text-white text-sm font-medium">
+                      {displayName}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Show placeholder only if no one else has joined yet */}
+            {remoteAttendees.size === 0 && (
+              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-white/10 w-80 h-60">
+                <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                      <span className="text-2xl font-bold text-gray-400">
+                        {otherUserName ? getInitials(otherUserName) : "?"}
+                      </span>
+                    </div>
+                    <p className="text-gray-400 text-sm">Waiting for {otherUserName || "participant"}...</p>
+                  </div>
                 </div>
               </div>
             )}
-            <div className="absolute bottom-2 left-2">
-              <span className="bg-black/80 px-2 py-1 rounded text-white text-xs font-medium">
-                You {!audioEnabled && "🔇"}
-              </span>
-            </div>
           </div>
-
-          {/* Remote participants */}
-          {Array.from(remoteAttendees.entries()).map(([attendeeId, attendee]) => {
-            const displayName = participantNames.get(attendeeId) || otherUserName || "Participant";
-            
-            return (
-              <div 
-                key={attendeeId} 
-                className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0 border-2 border-white/10"
-              >
-                {attendee.hasVideo && attendee.tileId !== undefined && !screenShareEnabled ? (
-                  <video
-                    ref={(el) => {
-                      if (el && attendee.tileId !== undefined && !screenShareEnabled) {
-                        remoteVideoRefs.current.set(attendee.tileId, el);
-                        bindVideoElement(attendee.tileId, el);
-                      }
-                    }}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <span className="text-xl font-bold text-white">
-                        {getInitials(displayName)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-2">
-                  <span className="bg-black/80 px-2 py-1 rounded text-white text-xs font-medium">
-                    {displayName}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
         </div>
-      </div>
+      )}
 
       {/* Controls */}
       <div className="bg-black/40 backdrop-blur-xl px-6 py-4 border-t border-white/10">
