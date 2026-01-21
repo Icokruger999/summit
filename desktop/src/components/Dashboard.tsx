@@ -1052,7 +1052,8 @@ export default function Dashboard({ user }: DashboardProps) {
                     // Store the other user's name for the call screen
                     setOtherUserName(recipientName);
 
-                    // Send call notification to recipient
+                    // Send call notification to recipient (MUST succeed before joining)
+                    let notificationSent = false;
                     if (recipientId) {
                       try {
                         const token = localStorage.getItem("auth_token");
@@ -1071,26 +1072,33 @@ export default function Dashboard({ user }: DashboardProps) {
                         
                         if (response.ok) {
                           console.log("✅ Call notification sent successfully to:", recipientId);
+                          notificationSent = true;
                         } else {
                           const errorText = await response.text();
                           console.error("❌ Failed to send call notification:", response.status, errorText);
-                          alert(`Failed to notify ${recipientName}. They may not receive the call notification.`);
+                          alert(`Failed to notify ${recipientName}. Call cancelled.\n\nError: ${response.status} - ${errorText}`);
+                          return; // Don't join the call if notification failed
                         }
                       } catch (error) {
                         console.error("❌ Network error sending call notification:", error);
-                        alert(`Network error: Could not notify ${recipientName}. Check your connection.`);
+                        alert(`Network error: Could not notify ${recipientName}. Call cancelled.\n\nPlease check your internet connection.`);
+                        return; // Don't join the call if notification failed
                       }
                     } else {
-                      console.warn("⚠️ Could not find recipient ID for call notification");
-                      alert("Could not identify the recipient. Call notification not sent.");
+                      console.error("⚠️ Could not find recipient ID for call notification");
+                      alert("Could not identify the recipient. Call cancelled.");
+                      return; // Don't join the call if we can't notify
                     }
 
-                    // Caller joins immediately (no pre-call settings)
-                    setCallRoom(roomName);
-                    setCallType(type);
-                    setInCall(true);
-                    updateStatus("busy");
-                    localStorage.setItem("status_manually_set", "false");
+                    // Only join the call if notification was sent successfully
+                    if (notificationSent) {
+                      console.log("✅ Notification sent, joining call...");
+                      setCallRoom(roomName);
+                      setCallType(type);
+                      setInCall(true);
+                      updateStatus("busy");
+                      localStorage.setItem("status_manually_set", "false");
+                    }
                   }}
                   onMessageSent={(chatId, message, timestamp) => {
                     // Message sent - ChatList will update via custom event
