@@ -78,10 +78,10 @@ export const sounds = {
   // Message received sound
   messageReceived: () => {
     if (localStorage.getItem("soundsEnabled") === "false") return;
-    playTone(262, 0.15, 'sine', 0.15); // C4
+    playTone(262, 0.2, 'sine', 0.4); // C4 - louder and longer
     setTimeout(() => {
-      playTone(330, 0.15, 'sine', 0.15); // E4
-    }, 100);
+      playTone(330, 0.2, 'sine', 0.4); // E4 - louder and longer
+    }, 120);
   },
 
   // Meeting started sound (low, soft attention sound)

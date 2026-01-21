@@ -394,6 +394,16 @@ export default function Dashboard({ user }: DashboardProps) {
             return c;
           })
         );
+        
+        // Dispatch messageUpdate event so ChatList can update its own state
+        window.dispatchEvent(new CustomEvent('messageUpdate', {
+          detail: {
+            chatId: notification.chatId,
+            lastMessage: notification.content,
+            timestamp: new Date(notification.timestamp),
+            senderId: notification.senderId,
+          }
+        }));
       } else {
         // Chat not in list, trigger reload to get it
         console.log("🔄 Chat not in list, reloading chats...");
@@ -883,17 +893,17 @@ export default function Dashboard({ user }: DashboardProps) {
               
               {showStatusDropdown && (
                 <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  {[
+                  {([
                     { status: "online", label: "Online", color: "text-green-500 fill-green-500" },
                     { status: "away", label: "Away", color: "text-amber-500 fill-amber-500" },
                     { status: "busy", label: "Busy", color: "text-yellow-500 fill-yellow-500" },
                     { status: "dnd", label: "Do Not Disturb", color: "text-red-500 fill-red-500" },
                     { status: "offline", label: "Offline", color: "text-gray-400 fill-gray-400" },
-                  ].map(({ status, label, color }) => (
+                  ] as const).map(({ status, label, color }) => (
                     <button
                       key={status}
                       onClick={async () => {
-                        await updateStatus(status);
+                        await updateStatus(status as "online" | "offline" | "away" | "busy" | "dnd");
                         localStorage.setItem("status_manually_set", "true");
                         setShowStatusDropdown(false);
                         refetchPresence();
