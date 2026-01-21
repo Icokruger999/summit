@@ -222,11 +222,11 @@ export default function ChatList({
   // Clear unread count and scroll into view when selected chat changes
   useEffect(() => {
     if (selectedChat) {
-      // Clear unread count in state (no localStorage)
+      // Clear unread count in state (set to undefined instead of 0)
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat.id === selectedChat || chat.dbId === selectedChat
-            ? { ...chat, unreadCount: 0, hasUnread: false }
+            ? { ...chat, unreadCount: undefined, hasUnread: false }
             : chat
         )
       );
