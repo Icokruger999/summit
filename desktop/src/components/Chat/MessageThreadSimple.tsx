@@ -13,6 +13,7 @@ interface Message {
   timestamp: Date | string;
   type: "text" | "file";
   status?: "sending" | "sent" | "received" | "read" | "failed";
+  editedAt?: string;
 }
 
 interface MessageThreadSimpleProps {
@@ -981,21 +982,29 @@ export default function MessageThreadSimple({
       const result = await messagesApi.editMessage(messageId, editingContent.trim());
       console.log("✅ Message edited successfully:", result);
       
-      // Update message in state and cache
+      // Update message in state and cache immediately
       setMessages((prev) => {
         const updated = prev.map((msg) =>
-          msg.id === messageId ? { ...msg, content: editingContent.trim() } : msg
+          msg.id === messageId 
+            ? { ...msg, content: editingContent.trim(), editedAt: result.editedAt || new Date().toISOString() } 
+            : msg
         );
         // Update cache with edited message
         messageCache.set(chatId, updated, dbChatId || undefined);
+        console.log("✅ Updated message in state and cache");
         return updated;
       });
       
       setEditingMessageId(null);
       setEditingContent("");
       setMessageMenuOpen(null);
-    } catch (error) {
+      
+      console.log("✅ Edit complete, UI updated");
+    } catch (error: any) {
       console.error("❌ Error editing message:", error);
+      console.error("Error details:", error.message, error.response);
+      // Show error to user
+      alert(`Failed to edit message: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -1314,9 +1323,16 @@ export default function MessageThreadSimple({
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                              {message.content}
-                            </p>
+                            <>
+                              <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                {message.content}
+                              </p>
+                              {message.editedAt && (
+                                <span className="text-xs text-gray-500 italic mt-1 block">
+                                  (edited)
+                                </span>
+                              )}
+                            </>
                           )}
                           {isOwnMessage && message.status && !editingMessageId && (
                             <div className="flex items-center gap-1 text-xs mt-1 text-gray-500">
