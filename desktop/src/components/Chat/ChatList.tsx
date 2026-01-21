@@ -444,7 +444,17 @@ export default function ChatList({
                               if (el) chatItemRefs.current.set(chat.id, el);
                               else chatItemRefs.current.delete(chat.id);
                             }}
-                            onClick={() => onSelectChat(chat.id)}
+                            onClick={() => {
+                              // Clear unread count immediately before selecting
+                              setChats((prevChats) =>
+                                prevChats.map((c) =>
+                                  c.id === chat.id || c.dbId === chat.id
+                                    ? { ...c, unreadCount: undefined, hasUnread: false }
+                                    : c
+                                )
+                              );
+                              onSelectChat(chat.id);
+                            }}
                             className={`w-full px-4 py-4 text-left hover:bg-gray-50 transition-all ${
                               selectedChat === chat.id 
                                 ? "bg-gradient-to-r from-blue-50 to-sky-50 border-l-4 border-blue-500" 
@@ -533,8 +543,15 @@ export default function ChatList({
                               else chatItemRefs.current.delete(chat.id);
                             }}
                             onClick={() => {
+                              // Clear unread count immediately before selecting
+                              setChats((prevChats) =>
+                                prevChats.map((c) =>
+                                  c.id === chat.id || c.dbId === chat.id
+                                    ? { ...c, unreadCount: undefined, hasUnread: false }
+                                    : c
+                                )
+                              );
                               onSelectChat(chat.id);
-                              // Unread count will be cleared by the useEffect hook above
                             }}
                             className={`w-full px-4 py-4 text-left hover:bg-gray-50 transition-all ${
                               selectedChat === chat.id 
