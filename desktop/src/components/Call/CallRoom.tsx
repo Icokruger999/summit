@@ -98,10 +98,13 @@ export default function CallRoom({ roomName, callType = "video", initialSettings
 
       if (response.ok) {
         setInvitedUsers((prev) => new Set(prev).add(contact.contact_id));
-        console.log(`Invited ${contact.contact_name} to the call`);
+        console.log(`✅ Invited ${contact.contact_name} to the call`);
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Failed to invite ${contact.contact_name}:`, response.status, errorText);
       }
     } catch (err) {
-      console.error("Failed to invite user:", err);
+      console.error("❌ Failed to invite user (network error):", err);
     }
   };
 

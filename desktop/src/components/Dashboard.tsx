@@ -1056,7 +1056,7 @@ export default function Dashboard({ user }: DashboardProps) {
                     if (recipientId) {
                       try {
                         const token = localStorage.getItem("auth_token");
-                        await fetch(`${import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com"}/api/chime/notify`, {
+                        const response = await fetch(`${import.meta.env.VITE_SERVER_URL || "https://summit.api.codingeverest.com"}/api/chime/notify`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
@@ -1068,12 +1068,21 @@ export default function Dashboard({ user }: DashboardProps) {
                             callType: type,
                           }),
                         });
-                        console.log("📞 Call notification sent to:", recipientId);
+                        
+                        if (response.ok) {
+                          console.log("✅ Call notification sent successfully to:", recipientId);
+                        } else {
+                          const errorText = await response.text();
+                          console.error("❌ Failed to send call notification:", response.status, errorText);
+                          alert(`Failed to notify ${recipientName}. They may not receive the call notification.`);
+                        }
                       } catch (error) {
-                        console.error("Failed to send call notification:", error);
+                        console.error("❌ Network error sending call notification:", error);
+                        alert(`Network error: Could not notify ${recipientName}. Check your connection.`);
                       }
                     } else {
                       console.warn("⚠️ Could not find recipient ID for call notification");
+                      alert("Could not identify the recipient. Call notification not sent.");
                     }
 
                     // Caller joins immediately (no pre-call settings)
