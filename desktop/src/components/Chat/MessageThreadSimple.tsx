@@ -66,6 +66,7 @@ export default function MessageThreadSimple({
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   // Generate consistent color for user based on their ID
   const getUserColor = (userId: string, isOwn: boolean) => {
@@ -1563,12 +1564,13 @@ export default function MessageThreadSimple({
                           ) : (
                             <>
                               {message.type === "file" && message.content && message.content.startsWith('data:image') ? (
-                                // Display image inline (no click to open)
+                                // Display image inline with click to view full size
                                 <div>
                                   <img 
                                     src={message.content} 
                                     alt="Shared image" 
-                                    className="max-w-xs max-h-64 rounded-lg"
+                                    className="max-w-xs max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => setViewingImage(message.content)}
                                     onError={(e) => {
                                       console.error('❌ Error loading image:', e);
                                       console.log('Image data length:', message.content?.length);
@@ -1780,6 +1782,29 @@ export default function MessageThreadSimple({
                 Add {selectedMembers.length > 0 && `(${selectedMembers.length})`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-full">
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img 
+              src={viewingImage} 
+              alt="Full size" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
