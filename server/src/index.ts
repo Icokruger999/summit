@@ -108,22 +108,28 @@ wss.on("connection", (ws, req) => {
   }
 });
 
-// CORS configuration - Production only, no localhost
+// CORS configuration - Production only, no localhost (except Tauri)
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(origin => !origin.includes('localhost') && !origin.includes('127.0.0.1'))
   : ['https://www.codingeverest.com', 'https://codingeverest.com', 'https://summit.codingeverest.com'];
 
 const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl, or Tauri apps)
     if (!origin) return callback(null, true);
+    
+    // Allow Tauri desktop app origins
+    if (origin.startsWith('tauri://')) {
+      console.log('✅ Allowing Tauri desktop app origin:', origin);
+      return callback(null, true);
+    }
     
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.warn(`⚠️  CORS blocked origin: ${origin}`);
-      console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
+      console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}, tauri://*`);
       callback(new Error('Not allowed by CORS'));
     }
   },
