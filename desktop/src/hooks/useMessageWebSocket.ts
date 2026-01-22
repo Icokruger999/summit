@@ -112,6 +112,28 @@ export function useMessageWebSocket({
             console.log("📨 Received real-time message notification:", data.data);
             // Use ref to get latest callback without recreating connection
             onNewMessageRef.current(data.data);
+            
+            // Show desktop notification if app is not focused (Electron only)
+            if (typeof window !== 'undefined' && (window as any).electronAPI && !document.hasFocus()) {
+              try {
+                const messageData = data.data;
+                const senderName = messageData.senderName || 'Someone';
+                const messageText = messageData.content || 'New message';
+                
+                // Limit message preview to 100 characters
+                const preview = messageText.length > 100 
+                  ? messageText.substring(0, 100) + '...' 
+                  : messageText;
+                
+                (window as any).electronAPI.showNotification({
+                  title: senderName,
+                  body: preview
+                });
+                console.log('🔔 Desktop notification shown');
+              } catch (notifError) {
+                console.error('Failed to show desktop notification:', notifError);
+              }
+            }
           } else if (data.type === "INCOMING_CALL") {
             console.log("📞 Received incoming call notification:", data.data);
             // Dispatch event for incoming call
@@ -123,6 +145,22 @@ export function useMessageWebSocket({
                 callType: data.data.callType,
               }
             }));
+            
+            // Show desktop notification for incoming call (Electron only)
+            if (typeof window !== 'undefined' && (window as any).electronAPI) {
+              try {
+                const callerName = data.data.callerName || 'Someone';
+                const callType = data.data.callType === 'video' ? 'Video' : 'Audio';
+                
+                (window as any).electronAPI.showNotification({
+                  title: `${callType} Call from ${callerName}`,
+                  body: 'Click to answer'
+                });
+                console.log('🔔 Call notification shown');
+              } catch (notifError) {
+                console.error('Failed to show call notification:', notifError);
+              }
+            }
           } else if (data.type === "CALL_ENDED") {
             console.log("📞 Received call ended notification:", data.data);
             // Dispatch event for call ending
@@ -141,6 +179,22 @@ export function useMessageWebSocket({
                 creatorName: data.data.creatorName || data.data.adderName,
               }
             }));
+            
+            // Show desktop notification for being added to group (Electron only)
+            if (typeof window !== 'undefined' && (window as any).electronAPI && !document.hasFocus()) {
+              try {
+                const chatName = data.data.chatName || 'a group';
+                const creatorName = data.data.creatorName || data.data.adderName || 'Someone';
+                
+                (window as any).electronAPI.showNotification({
+                  title: 'Added to Group',
+                  body: `${creatorName} added you to ${chatName}`
+                });
+                console.log('🔔 Group notification shown');
+              } catch (notifError) {
+                console.error('Failed to show group notification:', notifError);
+              }
+            }
           } else if (data.type === "MESSAGES_READ") {
             console.log("✅ Received messages read notification:", data.data);
             // Dispatch event for messages being read (so sender can update statuses)
