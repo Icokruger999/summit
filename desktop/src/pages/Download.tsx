@@ -25,9 +25,14 @@ export default function DownloadPage() {
   const handleDownload = (os: OS) => {
     if (os === "unknown") return;
     
-    // Desktop installers are being prepared
-    // For now, users can continue using the web version
-    console.log(`Download requested for ${os} - installers coming soon`);
+    if (os === "windows") {
+      // S3 Download URL (Ireland region)
+      const s3Url = "https://desktopsummit.s3.eu-west-1.amazonaws.com/Summit-Setup-1.0.0.exe";
+      window.location.href = s3Url;
+    } else {
+      // Other platforms coming soon
+      console.log(`Download requested for ${os} - installers coming soon`);
+    }
   };
 
   return (
@@ -68,15 +73,29 @@ export default function DownloadPage() {
               Get the full Summit experience with native desktop notifications, better performance, and offline capabilities.
             </p>
             
-            {/* Coming Soon Notice */}
-            <div className="max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                🚀 Desktop installers are being prepared
-              </p>
-              <p className="text-sm text-blue-700">
-                In the meantime, you can continue using Summit in your browser with all the same features including video calls, chat, and notifications.
-              </p>
-            </div>
+            {/* Coming Soon Notice - Only for Mac/Linux */}
+            {detectedOS !== "windows" && (
+              <div className="max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  🚀 macOS and Linux installers coming soon
+                </p>
+                <p className="text-sm text-blue-700">
+                  Windows desktop app is now available! Mac and Linux versions are being prepared.
+                </p>
+              </div>
+            )}
+            
+            {/* Windows Available Notice */}
+            {detectedOS === "windows" && (
+              <div className="max-w-2xl mx-auto bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                <p className="text-sm text-green-800 font-medium mb-2">
+                  ✅ Windows desktop app is ready!
+                </p>
+                <p className="text-sm text-green-700">
+                  Download now to get native notifications and better performance.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Download Cards */}
@@ -102,10 +121,9 @@ export default function DownloadPage() {
                 )}
                 <button
                   onClick={() => handleDownload("windows")}
-                  disabled
-                  className="w-full px-4 py-3 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                 >
-                  Coming Soon
+                  Download for Windows
                 </button>
               </div>
             </div>
