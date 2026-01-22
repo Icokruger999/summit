@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2, UserPlus } from "lucide-react";
+import { Send, Phone, Video, Clock, Check, CheckCheck, X, Circle, MoreVertical, Edit2, Trash2, UserPlus, Mic, Square, Play, Pause } from "lucide-react";
 import { messagesApi, chatsApi, presenceApi } from "../../lib/api";
 import { formatTime } from "../../lib/timeFormat";
 import { useMessageWebSocket } from "../../hooks/useMessageWebSocket";
@@ -67,6 +67,16 @@ export default function MessageThreadSimple({
   const chatMenuRef = useRef<HTMLDivElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
   // Generate consistent color for user based on their ID
   const getUserColor = (userId: string, isOwn: boolean) => {
@@ -227,6 +237,180 @@ export default function MessageThreadSimple({
       setSending(false);
       console.log('✅ Send image complete, sending:', false);
     }
+  };
+
+  // Start voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Update recording time every second
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      console.log('🎤 Recording started');
+    } catch (error) {
+      console.error('❌ Error starting recording:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  // Stop voice recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      console.log('🎤 Recording stopped');
+    }
+  };
+
+  // Cancel voice recording
+  const cancelRecording = () => {
+    stopRecording();
+    setAudioBlob(null);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+    console.log('🎤 Recording cancelled');
+  };
+
+  // Play/pause audio preview
+  const toggleAudioPreview = () => {
+    if (!audioBlob) return;
+
+    if (isPlayingPreview) {
+      audioPreviewRef.current?.pause();
+      setIsPlayingPreview(false);
+    } else {
+      if (!audioPreviewRef.current) {
+        const audio = new Audio(URL.createObjectURL(audioBlob));
+        audioPreviewRef.current = audio;
+        audio.onended = () => setIsPlayingPreview(false);
+      }
+      audioPreviewRef.current.play();
+      setIsPlayingPreview(true);
+    }
+  };
+
+  // Send voice message
+  const handleSendVoiceMessage = async () => {
+    if (!audioBlob || !dbChatId || sending) {
+      console.log('❌ Cannot send voice message');
+      return;
+    }
+
+    console.log('📤 Sending voice message, size:', audioBlob.size);
+    setSending(true);
+    const messageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      
+      await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
+
+      const base64Audio = reader.result as string;
+
+      const message: Message = {
+        id: messageId,
+        senderId: userId,
+        senderName: "You",
+        content: base64Audio,
+        timestamp: new Date(),
+        type: "file",
+        status: "sending",
+      };
+
+      // Add message optimistically
+      setMessages((prev) => {
+        const updated = [...prev, message];
+        messageCache.addMessage(chatId, message, dbChatId || undefined);
+        return updated;
+      });
+
+      // Clear audio preview
+      setAudioBlob(null);
+      setRecordingTime(0);
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current = null;
+      }
+      setIsPlayingPreview(false);
+
+      // Save to database
+      await messagesApi.saveMessage({
+        id: messageId,
+        chatId: dbChatId,
+        content: base64Audio,
+        type: "file",
+      });
+
+      // Update status to "sent"
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m.id === messageId ? { ...m, status: "sent" as const } : m
+        );
+        messageCache.updateMessageStatus(chatId, messageId, "sent", dbChatId || undefined);
+        return updated;
+      });
+
+      // Update chat list
+      window.dispatchEvent(new CustomEvent('messageUpdate', {
+        detail: {
+          chatId: dbChatId,
+          lastMessage: "🎤 Voice message",
+          timestamp: new Date(),
+          senderId: userId,
+        }
+      }));
+
+      console.log('✅ Voice message sent successfully');
+    } catch (error) {
+      console.error("❌ Error sending voice message:", error);
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
+          m.id === messageId ? { ...m, status: "failed" as const } : m
+        );
+        messageCache.updateMessageStatus(chatId, messageId, "failed", dbChatId || undefined);
+        return updated;
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Format recording time (mm:ss)
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Close status dropdown when clicking outside
@@ -1587,6 +1771,19 @@ export default function MessageThreadSimple({
                                     }}
                                   />
                                 </div>
+                              ) : message.type === "file" && message.content && message.content.startsWith('data:audio') ? (
+                                // Display audio player for voice messages
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 bg-white/50 rounded-full px-3 py-2">
+                                    <Mic className="w-4 h-4 text-blue-600" />
+                                    <audio 
+                                      controls 
+                                      src={message.content}
+                                      className="h-8"
+                                      style={{ width: '200px' }}
+                                    />
+                                  </div>
+                                </div>
                               ) : (
                                 <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                                   {message.content}
@@ -1710,6 +1907,65 @@ export default function MessageThreadSimple({
             </div>
           </div>
         )}
+        
+        {/* Voice Recording Preview */}
+        {audioBlob && !isRecording && (
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <button
+                  onClick={toggleAudioPreview}
+                  className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+                >
+                  {isPlayingPreview ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </button>
+                <div className="flex items-center gap-2">
+                  <Mic className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-gray-600">Voice message ({formatRecordingTime(recordingTime)})</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSendVoiceMessage}
+                  disabled={sending}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  Send
+                </button>
+                <button
+                  onClick={cancelRecording}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Recording in Progress */}
+        {isRecording && (
+          <div className="mb-3 p-3 bg-red-50 rounded-lg border border-red-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <Mic className="w-5 h-5 text-red-600" />
+                  <span className="text-sm font-medium text-red-600">Recording...</span>
+                </div>
+                <span className="text-sm text-gray-600">{formatRecordingTime(recordingTime)}</span>
+              </div>
+              <button
+                onClick={stopRecording}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2 text-sm font-medium"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-end gap-3">
           <div className="flex-1 relative">
             <textarea
@@ -1718,27 +1974,43 @@ export default function MessageThreadSimple({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder="Type a message or paste an image..."
-              disabled={sending || !dbChatId}
+              disabled={sending || !dbChatId || isRecording || !!audioBlob}
               className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all max-h-32"
               rows={1}
             />
           </div>
-          <button
-            onClick={() => {
-              const content = newMessage.trim();
-              if (content && !sending && dbChatId) {
-                setNewMessage(""); // Clear input immediately
-                handleSendMessage(content).catch((error) => {
-                  console.error("Error sending message:", error);
-                  setNewMessage(content); // Restore on error
-                });
-              }
-            }}
-            disabled={!newMessage.trim() || sending || !dbChatId}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-sky-600 text-white rounded-2xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Send className="w-5 h-5" />
-          </button>
+          
+          {/* Voice Recording Button */}
+          {!newMessage.trim() && !audioBlob && !isRecording && (
+            <button
+              onClick={startRecording}
+              disabled={sending || !dbChatId}
+              className="px-4 py-3 bg-gradient-to-r from-blue-500 to-sky-600 text-white rounded-2xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title="Record voice message"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          )}
+          
+          {/* Send Button */}
+          {newMessage.trim() && !audioBlob && !isRecording && (
+            <button
+              onClick={() => {
+                const content = newMessage.trim();
+                if (content && !sending && dbChatId) {
+                  setNewMessage(""); // Clear input immediately
+                  handleSendMessage(content).catch((error) => {
+                    console.error("Error sending message:", error);
+                    setNewMessage(content); // Restore on error
+                  });
+                }
+              }}
+              disabled={!newMessage.trim() || sending || !dbChatId}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-sky-600 text-white rounded-2xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 

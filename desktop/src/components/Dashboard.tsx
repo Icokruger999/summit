@@ -923,17 +923,6 @@ export default function Dashboard({ user }: DashboardProps) {
       {/* Header */}
       <header className="glass-frosty shadow-sm border-b border-white/50">
           <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                <img src={iconImage} alt="Summit Logo" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-sky-600 bg-clip-text text-transparent">
-                  Summit
-                </h1>
-                <p className="text-xs text-gray-500">by Coding Everest</p>
-              </div>
-            </div>
           <div className="flex items-center gap-4">
             {/* Status Dropdown */}
             <div className="relative" ref={statusDropdownRef}>
