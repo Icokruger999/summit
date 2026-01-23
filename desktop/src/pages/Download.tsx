@@ -27,7 +27,7 @@ export default function DownloadPage() {
     
     if (os === "windows") {
       // S3 Download URL (Ireland region)
-      const s3Url = "https://desktopsummit.s3.eu-west-1.amazonaws.com/Summit-Setup-1.0.6.exe";
+      const s3Url = "https://desktopsummit.s3.eu-west-1.amazonaws.com/Summit-Setup-1.0.8.exe";
       window.location.href = s3Url;
     } else {
       // Other platforms coming soon
